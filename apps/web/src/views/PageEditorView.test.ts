@@ -507,7 +507,7 @@ describe('PageEditorView', () => {
       baseMarkdown: 'Current page text',
     })
     expect(createPageEditRun).not.toHaveBeenCalled()
-    expect(wrapper.findAll('.app-spinner')).toHaveLength(1)
+    expect(wrapper.findAll('.edit-chat__message--busy')).toHaveLength(1)
     expect(wrapper.text()).toContain('Preparing proposal')
 
     wrapper.unmount()

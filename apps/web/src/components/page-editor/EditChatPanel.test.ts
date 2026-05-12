@@ -39,14 +39,13 @@ async function prepareScroller(
 }
 
 describe('EditChatPanel', () => {
-  it('uses a single-line prompt input', () => {
+  it('uses an auto-grow textarea prompt input', () => {
     const wrapper = mount(EditChatPanel, {
       props: { messages: [], modelValue: '' },
       global: { plugins: [vuetify] },
     })
 
-    expect(wrapper.find('input').exists()).toBe(true)
-    expect(wrapper.find('textarea').exists()).toBe(false)
+    expect(wrapper.find('textarea').exists()).toBe(true)
   })
 
   it('auto-scrolls when chat content changes', async () => {
