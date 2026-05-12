@@ -5,16 +5,22 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/app/.venv \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
-# Install dependencies (cached layer)
 COPY pyproject.toml uv.lock ./
 COPY packages/shared packages/shared
 COPY apps/worker apps/worker
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --package cm-worker
+    uv sync --frozen --no-dev --package cm-worker && \
+    groupadd --system --gid 1001 app && \
+    useradd --system --uid 1001 --gid 1001 --no-create-home app && \
+    chown -R app:app /app
+
+USER app
 
 CMD ["celery", "-A", "cm_worker.celery_app", "worker", "--loglevel=info"]
