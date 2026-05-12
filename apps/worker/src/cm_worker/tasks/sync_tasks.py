@@ -2,9 +2,9 @@ from datetime import datetime
 
 from cm_shared.confluence.move_validation import ensure_move_stays_in_space
 from cm_shared.db.session import SessionLocal
-from cm_shared.models.confluence import ConfluencePage, DocumentChunk
+from cm_shared.models.confluence import ConfluencePage
 from cm_shared.models.jobs import SyncRun
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from cm_worker.celery_app import celery_app
 from cm_worker.confluence.client import ConfluenceClient
@@ -17,7 +17,6 @@ from cm_worker.rag.lightrag import (
     sync_pages_to_lightrag,
 )
 from cm_worker.sync.fetch_pages import (
-    index_page,
     sync_space_pages,
     upsert_page,
     upsert_page_with_status,
@@ -26,7 +25,7 @@ from cm_worker.tasks.history import mark_task_finished, mark_task_running
 
 
 def refresh_tree_metadata(session, client: ConfluenceClient) -> None:
-    """Refresh parent/order metadata without rebuilding page embeddings."""
+    """Refresh parent/order metadata without touching LightRAG."""
     tree = client.scan_space_page_tree()
     pages = session.scalars(
         select(ConfluencePage).where(ConfluencePage.deleted_at.is_(None))
@@ -176,14 +175,10 @@ def refresh_page(run_id: str, page_id: int) -> None:
         try:
             client = ConfluenceClient()
             payload = client.get_page(page.confluence_id)
-            result = upsert_page_with_status(
-                session,
-                payload,
-            )
+            result = upsert_page_with_status(session, payload)
             refreshed = result.page
             lightrag_client = LightRagClient()
             source_exists = lightrag_file_source(refreshed) in lightrag_client.file_sources()
-            _chunk_count = index_page(session, refreshed)
             pages_to_submit = [refreshed] if result.content_changed or not source_exists else []
             lightrag_result = sync_pages_to_lightrag(
                 pages_to_submit,
@@ -249,7 +244,6 @@ def create_empty_page(run_id: str, title: str, parent_id: str | None = None) -> 
             page = upsert_page(session, payload)
             page.is_placeholder = True
             refresh_tree_metadata(session, client)
-            _chunk_count = index_page(session, page)
             lightrag_result = sync_pages_to_lightrag([page], clear_existing=False)
             run.status = "completed"
             run.message = (
@@ -280,7 +274,7 @@ def create_empty_page(run_id: str, title: str, parent_id: str | None = None) -> 
 
 @celery_app.task(name="cm_worker.delete_page")
 def delete_page(run_id: str, page_id: int) -> None:
-    """Delete a page from Confluence and remove local vector data."""
+    """Delete a page from Confluence and remove it from LightRAG."""
     task_name = "cm_worker.delete_page"
     with SessionLocal() as session:
         run = session.get(SyncRun, run_id)
@@ -306,14 +300,12 @@ def delete_page(run_id: str, page_id: int) -> None:
         try:
             client = ConfluenceClient()
             client.delete_page(page.confluence_id)
-            session.execute(delete(DocumentChunk).where(DocumentChunk.page_id == page.id))
             deleted_lightrag_docs = delete_pages_from_lightrag([page])
             page.deleted_at = datetime.utcnow()
             refresh_tree_metadata(session, client)
             run.status = "completed"
             run.message = (
-                "Deleted page, removed local vector data, "
-                f"and deleted {deleted_lightrag_docs} LightRAG document"
+                f"Deleted page and removed {deleted_lightrag_docs} LightRAG document"
             )
             add_event(session, run_id, run.message)
             mark_task_finished(

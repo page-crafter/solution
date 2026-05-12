@@ -11,8 +11,6 @@ from cm_worker.confluence.preview import preview_has_rendered_content, storage_f
 from cm_worker.extract.xhtml_to_text import extract_text_from_storage
 from cm_worker.page_editor.convert_markdown import convert_markdown_to_storage
 from cm_worker.page_editor.diffing import build_storage_diff, format_storage_xhtml_for_diff
-from cm_worker.rag.chunking import chunk_text
-from cm_worker.rag.embedding import VECTOR_SIZE, deterministic_embedding
 from cm_worker.sync.fetch_pages import page_parent_id, page_sort_order
 
 
@@ -22,20 +20,6 @@ def test_extract_text_from_storage_keeps_macro_hint() -> None:
 
     assert "Hello" in text
     assert "Confluence macro: toc" in text
-
-
-def test_chunk_text_uses_overlap() -> None:
-    """Chunking produces overlapping chunks for long documentation text."""
-    chunks = chunk_text("a" * 50, max_chars=20, overlap=5)
-
-    assert chunks == ["a" * 20, "a" * 20, "a" * 20]
-
-
-def test_deterministic_embedding_matches_pgvector_size() -> None:
-    """Fallback embeddings always match the configured pgvector dimensions."""
-    vector = deterministic_embedding("documentation")
-
-    assert len(vector) == VECTOR_SIZE
 
 
 def test_convert_markdown_to_storage_uses_md2conf(monkeypatch) -> None:

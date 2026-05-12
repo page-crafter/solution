@@ -21,7 +21,7 @@ Syncs pages, indexes them for semantic search, generates Markdown drafts via LLM
 | Frontend       | Vue 3, TypeScript, Vuetify, Keycloak-js |
 | API            | FastAPI, Python 3.13, pydantic-settings |
 | Worker         | Celery, LangChain, LangGraph            |
-| Database       | PostgreSQL 16 + pgvector                |
+| Database       | PostgreSQL 16                           |
 | Cache / broker | Redis 7                                 |
 | RAG engine     | LightRAG                                |
 | Auth           | Keycloak 26                             |
@@ -97,6 +97,5 @@ packages/
   shared/     Shared ORM models, Pydantic schemas, settings (cm-shared)
 docker/
   keycloak/   Realm import JSON
-  confluence/ atlassian-agent.jar
 docs/         Architecture, configuration, API reference, deployment guide
 ```

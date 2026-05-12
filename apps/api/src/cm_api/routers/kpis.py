@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from cm_api.auth.dependencies import require_admin
 from cm_shared.db.session import get_session
-from cm_shared.models.confluence import ConfluencePage, DocumentChunk
+from cm_shared.models.confluence import ConfluencePage
 from cm_shared.models.jobs import TaskExecution
 from cm_shared.models.page_editor import PageEditRun
 from cm_shared.schemas.kpis import KpiCard
@@ -50,8 +50,6 @@ def list_kpis(
 
     coverage_pct = round(indexed / total_pages * 100, 1) if total_pages else 0.0
 
-    chunks = session.scalar(select(func.count()).select_from(DocumentChunk)) or 0
-
     spaces = session.scalar(
         select(func.count(func.distinct(ConfluencePage.space_key)))
         .select_from(ConfluencePage)
@@ -85,7 +83,6 @@ def list_kpis(
         KpiCard(label="Synced pages", value=str(total_pages), trend="Full space", tone="blue"),
         KpiCard(label="Indexed", value=str(indexed), trend="Search corpus", tone="green"),
         KpiCard(label="Coverage", value=f"{coverage_pct} %", trend="Indexed / total", tone="green"),
-        KpiCard(label="Chunks", value=str(chunks), trend="Embedding vectors", tone="green"),
         KpiCard(label="Open drafts", value=str(open_drafts), trend="Awaiting review", tone="orange"),
         KpiCard(label="Published today", value=str(published_today), trend="Pages shipped", tone="purple"),
         KpiCard(

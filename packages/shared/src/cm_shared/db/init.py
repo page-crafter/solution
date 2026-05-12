@@ -6,9 +6,7 @@ from cm_shared.models import all as _models  # noqa: F401
 
 
 def create_database_schema() -> None:
-    """Create pgvector extension and ORM tables for local development."""
-    with engine.begin() as connection:
-        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    """Create ORM tables on first startup."""
     Base.metadata.create_all(bind=engine)
     with engine.begin() as connection:
         connection.execute(

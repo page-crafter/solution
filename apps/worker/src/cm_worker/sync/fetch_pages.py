@@ -2,14 +2,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from cm_shared.models.confluence import ConfluencePage, DocumentChunk
-from sqlalchemy import delete, select
+from cm_shared.models.confluence import ConfluencePage
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cm_worker.confluence.client import ConfluenceClient
 from cm_worker.extract.xhtml_to_text import extract_text_from_storage
-from cm_worker.rag.chunking import chunk_text
-from cm_worker.rag.embedding import embed_text
 from cm_worker.sync.reconcile_deleted import mark_missing_pages_deleted
 
 
@@ -26,7 +24,6 @@ class SpaceSyncResult:
     """Summary of a Confluence space sync before external RAG submission."""
 
     page_count: int
-    chunk_count: int
     changed_pages: tuple[ConfluencePage, ...]
     unchanged_pages: tuple[ConfluencePage, ...]
     deleted_pages: tuple[ConfluencePage, ...]
@@ -119,31 +116,11 @@ def upsert_page_with_status(
     return PageUpsertResult(page=page, content_changed=content_changed)
 
 
-def index_page(session: Session, page: ConfluencePage) -> int:
-    """Replace pgvector chunks for a page with chunks from the latest sync."""
-    session.flush()
-    session.execute(delete(DocumentChunk).where(DocumentChunk.page_id == page.id))
-    chunks = chunk_text(page.extracted_text)
-    for index, content in enumerate(chunks):
-        session.add(
-            DocumentChunk(
-                page_id=page.id,
-                confluence_id=page.confluence_id,
-                chunk_index=index,
-                page_version=page.version_number,
-                content=content,
-                embedding=embed_text(content),
-            )
-        )
-    return len(chunks)
-
-
 def sync_space_pages(session: Session, client: ConfluenceClient | None = None) -> SpaceSyncResult:
-    """Sync the configured Confluence space and return page/chunk counts."""
+    """Sync the configured Confluence space and return page counts."""
     confluence = client or ConfluenceClient()
     payloads = confluence.scan_space_pages()
     active_ids = {str(page["id"]) for page in payloads}
-    chunk_count = 0
     changed_pages: list[ConfluencePage] = []
     unchanged_pages: list[ConfluencePage] = []
     for index, payload in enumerate(payloads):
@@ -152,7 +129,6 @@ def sync_space_pages(session: Session, client: ConfluenceClient | None = None) -
             payload,
             sort_order=index,
         )
-        chunk_count += index_page(session, result.page)
         if result.content_changed:
             changed_pages.append(result.page)
         else:
@@ -160,7 +136,6 @@ def sync_space_pages(session: Session, client: ConfluenceClient | None = None) -
     deleted_pages = mark_missing_pages_deleted(session, active_ids)
     return SpaceSyncResult(
         page_count=len(payloads),
-        chunk_count=chunk_count,
         changed_pages=tuple(changed_pages),
         unchanged_pages=tuple(unchanged_pages),
         deleted_pages=tuple(deleted_pages),

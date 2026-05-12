@@ -1,23 +1,18 @@
 import json
 from collections.abc import AsyncIterator
-from datetime import datetime
 from time import perf_counter
 from typing import Any
 from urllib.parse import urlparse
-from uuid import uuid4
 
 from cm_shared.db.session import SessionLocal, get_session
-from cm_shared.jobs.history import record_task_queued
 from cm_shared.models.chat import ChatMessage, ChatSession
 from cm_shared.models.confluence import ConfluencePage
 from cm_shared.schemas.chat import (
     ChatMessageRead,
-    ChatQuestionRequest,
     ChatStreamRequest,
     ChatSessionRead,
     CreateChatSessionRequest,
 )
-from cm_shared.schemas.common import JobRead
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
@@ -26,7 +21,6 @@ from sqlalchemy.orm import Session
 from cm_api.auth.dependencies import get_current_user
 from cm_api.auth.user import CurrentUser
 from cm_api.services.lightrag import stream_lightrag_query
-from cm_api.services.queue import enqueue_task
 from cm_shared.settings.app import get_settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -403,43 +397,6 @@ def list_messages(
         .order_by(ChatMessage.created_at)
     ).all()
     return [serialize_chat_message(session, message) for message in messages]
-
-
-@router.post("/sessions/{session_id}/messages", response_model=JobRead)
-def ask_question(
-    session_id: str,
-    request: ChatQuestionRequest,
-    session: Session = Depends(get_session),
-    user: CurrentUser = Depends(get_current_user),
-) -> JobRead:
-    """Persist a question and queue a worker RAG answer."""
-    chat_session = session.get(ChatSession, session_id)
-    if chat_session is None:
-        raise HTTPException(status_code=404, detail="Chat session not found")
-    message = ChatMessage(session_id=session_id, role="user", content=request.message)
-    session.add(message)
-    session.flush()
-    task_id = str(uuid4())
-    execution = record_task_queued(
-        session,
-        job_id=task_id,
-        task_id=task_id,
-        task_name="cm_worker.answer_question",
-        actor=user.email,
-        message="Chat answer queued",
-    )
-    session.commit()
-    try:
-        enqueue_task("cm_worker.answer_question", session_id, message.id, celery_task_id=task_id)
-    except Exception as exc:  # noqa: BLE001
-        now = datetime.utcnow()
-        execution.status = "failed"
-        execution.message = f"Failed to enqueue worker task: {exc}"
-        execution.finished_at = now
-        execution.updated_at = now
-        session.commit()
-        raise
-    return JobRead(id=task_id, status="queued", task_id=task_id)
 
 
 @router.post("/sessions/{session_id}/stream")
