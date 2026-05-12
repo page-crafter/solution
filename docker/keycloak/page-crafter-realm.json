@@ -1,0 +1,143 @@
+{
+  "realm": "page-crafter",
+  "enabled": true,
+  "displayName": "Page Crafter",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "roles": {
+    "realm": [],
+    "client": {
+      "page-crafter-web": [
+        { "name": "admin", "description": "Full access to all features", "composite": false, "clientRole": true },
+        { "name": "chat", "description": "Access to documentation chat widget only", "composite": false, "clientRole": true }
+      ]
+    }
+  },
+  "groups": [
+    {
+      "name": "page-crafter-admins",
+      "clientRoles": {
+        "page-crafter-web": ["admin"]
+      }
+    },
+    {
+      "name": "page-crafter-chat",
+      "clientRoles": {
+        "page-crafter-web": ["chat"]
+      }
+    },
+    { "name": "page-crafter-editors" },
+    { "name": "page-crafter-readers" }
+  ],
+  "clients": [
+    {
+      "clientId": "page-crafter-web",
+      "name": "Page Crafter Web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups"
+          }
+        },
+        {
+          "name": "page-crafter-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "page-crafter-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "client-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "client.id": "page-crafter-web"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@example.local",
+      "firstName": "Admin",
+      "lastName": "Local",
+      "enabled": true,
+      "emailVerified": true,
+      "groups": ["page-crafter-admins"],
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ]
+    },
+    {
+      "username": "chat",
+      "email": "chat@example.local",
+      "firstName": "Chat",
+      "lastName": "Local",
+      "enabled": true,
+      "emailVerified": true,
+      "groups": ["page-crafter-chat"],
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ]
+    },
+    {
+      "username": "editor",
+      "email": "editor@example.local",
+      "firstName": "Editor",
+      "lastName": "Local",
+      "enabled": true,
+      "emailVerified": true,
+      "groups": ["page-crafter-editors"],
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ]
+    },
+    {
+      "username": "reader",
+      "email": "reader@example.local",
+      "firstName": "Reader",
+      "lastName": "Local",
+      "enabled": true,
+      "emailVerified": true,
+      "groups": ["page-crafter-readers"],
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ]
+    }
+  ]
+}
