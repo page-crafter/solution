@@ -42,6 +42,8 @@ cp .env.example .env
 # Required: CONFLUENCE_PAT, OPENAI_API_KEY (or Ollama settings)
 ```
 
+Frontend browser configuration lives in `apps/web/public/config.json`. Update its backend base URL and Keycloak settings when exposing the stack on different hosts.
+
 ### 2. Start infrastructure
 
 ```bash

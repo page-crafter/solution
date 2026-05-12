@@ -49,17 +49,11 @@ docker compose build worker
 docker compose build front
 ```
 
-### Build arguments (web)
+### Frontend runtime config
 
-Vite env vars are baked into the JS bundle at build time. To target a non-localhost API:
+The Vue bundle reads browser-facing settings from `config.json` at startup. Update `apps/web/public/config.json` before building, or replace/mount `/usr/share/nginx/html/config.json` in a running web image to target a different API or Keycloak host without rebuilding the JavaScript bundle.
 
-```bash
-docker compose build front \
-  --build-arg VITE_API_BASE_URL=https://api.example.com \
-  --build-arg VITE_KEYCLOAK_URL=https://auth.example.com \
-  --build-arg VITE_KEYCLOAK_REALM=page-crafter \
-  --build-arg VITE_KEYCLOAK_CLIENT_ID=page-crafter-web
-```
+The Docker Compose setup mounts `apps/web/public/config.json` into the nginx container so local changes are picked up on refresh.
 
 ## Local development (without Docker)
 
@@ -117,6 +111,7 @@ docker compose build
 - Stage 2 (`runtime`): `nginx:alpine` — serves `dist/` with SPA fallback routing
 - `nginx.conf` sets `try_files $uri $uri/ /index.html` for Vue Router history mode
 - Static assets (`.js`, `.css`, fonts) served with `Cache-Control: public, immutable`
+- `config.json` is served with `Cache-Control: no-store`
 
 ## Database migrations
 

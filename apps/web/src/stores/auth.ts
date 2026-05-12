@@ -2,16 +2,14 @@ import Keycloak from 'keycloak-js'
 import { defineStore } from 'pinia'
 import { computed, shallowRef } from 'vue'
 import { setAuthTokenProvider, type AuthRefreshOptions } from '../api/client'
+import { getRuntimeConfig } from '../config/runtime'
 
-const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8080',
-  realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'page-crafter',
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'page-crafter-web',
-})
+type KeycloakClient = InstanceType<typeof Keycloak>
 
 const defaultDisplayName = 'Documentation editor'
 
 export const useAuthStore = defineStore('auth', () => {
+  const keycloak = shallowRef<KeycloakClient>()
   const initialized = shallowRef(false)
   const authenticated = shallowRef(false)
   const token = shallowRef<string>()
@@ -20,19 +18,29 @@ export const useAuthStore = defineStore('auth', () => {
   const isReady = computed(() => initialized.value)
   const isAuthenticated = computed(() => authenticated.value)
   const roles = computed<string[]>(
-    () => (keycloak.tokenParsed as Record<string, unknown>)?.roles as string[] ?? [],
+    () => (keycloak.value?.tokenParsed as Record<string, unknown> | undefined)?.roles as string[] ?? [],
   )
   const isAdmin = computed(() => roles.value.includes('admin'))
   const isChat = computed(() => roles.value.includes('chat'))
 
+  /** Creates the Keycloak SDK client after runtime config has been loaded. */
+  function getKeycloak(): KeycloakClient {
+    if (!keycloak.value) {
+      const { url, realm, clientId } = getRuntimeConfig().auth.keycloak
+      keycloak.value = new Keycloak({ url, realm, clientId })
+    }
+    return keycloak.value
+  }
+
   /** Synchronizes Pinia state with the latest Keycloak SDK state. */
   function syncAuthState(): void {
-    authenticated.value = Boolean(keycloak.authenticated && keycloak.token)
-    token.value = keycloak.token
+    const client = keycloak.value
+    authenticated.value = Boolean(client?.authenticated && client.token)
+    token.value = client?.token
     displayName.value = authenticated.value
       ? String(
-          keycloak.tokenParsed?.name
-          || keycloak.tokenParsed?.preferred_username
+          client?.tokenParsed?.name
+          || client?.tokenParsed?.preferred_username
           || defaultDisplayName,
         )
       : defaultDisplayName
@@ -50,15 +58,16 @@ export const useAuthStore = defineStore('auth', () => {
     if (initialized.value) {
       return
     }
+    const client = getKeycloak()
     setAuthTokenProvider(() => token.value, refreshToken)
-    keycloak.onTokenExpired = () => {
+    client.onTokenExpired = () => {
       void refreshToken({ force: true }).catch(() => undefined)
     }
-    keycloak.onAuthLogout = clearAuthState
-    keycloak.onAuthRefreshSuccess = syncAuthState
-    keycloak.onAuthRefreshError = syncAuthState
+    client.onAuthLogout = clearAuthState
+    client.onAuthRefreshSuccess = syncAuthState
+    client.onAuthRefreshError = syncAuthState
     try {
-      await keycloak.init({
+      await client.init({
         onLoad: 'check-sso',
         pkceMethod: 'S256',
         silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
@@ -71,23 +80,24 @@ export const useAuthStore = defineStore('auth', () => {
 
   /** Redirects the user to the configured SSO provider. */
   function login(): Promise<void> {
-    return keycloak.login({ redirectUri: window.location.origin })
+    return getKeycloak().login({ redirectUri: window.location.origin })
   }
 
   /** Logs the user out through the configured SSO provider. */
   function logout(): Promise<void> {
-    return keycloak.logout({ redirectUri: window.location.origin })
+    return getKeycloak().logout({ redirectUri: window.location.origin })
   }
 
   /** Refreshes the access token when Keycloak reports it is close to expiry. */
   async function refreshToken(options: AuthRefreshOptions = {}): Promise<string | undefined> {
-    if (!authenticated.value && !keycloak.authenticated) {
+    const client = getKeycloak()
+    if (!authenticated.value && !client.authenticated) {
       clearAuthState()
       return undefined
     }
 
     try {
-      await keycloak.updateToken(options.force ? -1 : 30)
+      await client.updateToken(options.force ? -1 : 30)
       syncAuthState()
       return token.value
     } catch (error) {

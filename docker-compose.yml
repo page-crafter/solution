@@ -11,7 +11,7 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       CONFLUENCE_BASE_URL: http://confluence:8090
       LIGHTRAG_BASE_URL: http://lightrag:9621
-      WEB_ORIGIN: http://localhost:8080
+      WEB_ORIGIN: http://localhost
     ports:
       - "8000:8000"
     read_only: true
@@ -33,13 +33,10 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-      args:
-        VITE_API_BASE_URL: http://localhost:8000
-        VITE_KEYCLOAK_URL: http://localhost:8080
-        VITE_KEYCLOAK_REALM: page-crafter
-        VITE_KEYCLOAK_CLIENT_ID: page-crafter-web
     ports:
-      - "8080:8080"
+      - "80:8080"
+    volumes:
+      - ./apps/web/public/config.json:/usr/share/nginx/html/config.json:ro
     read_only: true
     tmpfs:
       - /tmp

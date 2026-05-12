@@ -1,0 +1,12 @@
+{
+  "backend": {
+    "baseUrl": "http://localhost:8000"
+  },
+  "auth": {
+    "keycloak": {
+      "url": "http://localhost:8080",
+      "realm": "page-crafter",
+      "clientId": "page-crafter-web"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { loadRuntimeConfig, resetRuntimeConfigForTests } from '../config/runtime'
 import { apiRequest, setAuthTokenProvider, type AuthRefreshOptions } from './client'
 
 function jsonResponse(value: unknown, init: ResponseInit = {}): Response {
@@ -12,6 +13,7 @@ function jsonResponse(value: unknown, init: ResponseInit = {}): Response {
 describe('apiRequest', () => {
   afterEach(() => {
     setAuthTokenProvider(() => undefined)
+    resetRuntimeConfigForTests()
     vi.unstubAllGlobals()
   })
 
@@ -58,5 +60,21 @@ describe('apiRequest', () => {
     const secondRequest = fetchMock.mock.calls[1]?.[1] as RequestInit
     expect(new Headers(firstRequest.headers).get('Authorization')).toBe('Bearer stale-token')
     expect(new Headers(secondRequest.headers).get('Authorization')).toBe('Bearer fresh-token')
+  })
+
+  it('uses the runtime backend base URL', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({
+        backend: {
+          baseUrl: 'https://api.example.test',
+        },
+      }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await loadRuntimeConfig()
+    await expect(apiRequest('/api/kpis')).resolves.toEqual({ ok: true })
+
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.example.test/api/kpis')
   })
 })

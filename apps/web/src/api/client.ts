@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+import { getRuntimeConfig } from '../config/runtime'
 
 export interface AuthRefreshOptions {
   force?: boolean
@@ -59,7 +59,7 @@ function buildHeaders(init: RequestInit, token: string | undefined): Headers {
 
 /** Sends one fetch attempt without parsing the response body. */
 function sendRequest(path: string, init: RequestInit, token: string | undefined): Promise<Response> {
-  return fetch(`${API_BASE_URL}${path}`, { ...init, headers: buildHeaders(init, token) })
+  return fetch(`${getRuntimeConfig().backend.baseUrl}${path}`, { ...init, headers: buildHeaders(init, token) })
 }
 
 /** Sends an authenticated request and returns the raw response. */

@@ -6,11 +6,14 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import App from './App.vue'
+import { loadRuntimeConfig } from './config/runtime'
 import { router } from './router'
 import { vuetify } from './plugins/vuetify'
 
 /** Bootstraps the Vue application with routing, state, and Vuetify. */
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
+  await loadRuntimeConfig()
+
   const app = createApp(App)
   app.config.errorHandler = (err, _instance, info) => {
     console.error('[app error]', info, err)
@@ -21,5 +24,10 @@ function bootstrap(): void {
   app.mount('#app')
 }
 
-bootstrap()
-
+void bootstrap().catch((error) => {
+  console.error('[app bootstrap]', error)
+  const appRoot = document.querySelector('#app')
+  if (appRoot) {
+    appRoot.textContent = 'Application configuration could not be loaded.'
+  }
+})
