@@ -54,10 +54,7 @@ class AppSettings(BaseSettings):
     def jwks_url(self) -> str:
         """Return the Keycloak JWKS endpoint used to validate bearer tokens."""
         keycloak_url = self.keycloak_internal_url or self.keycloak_url
-        return (
-            f"{keycloak_url}/realms/{self.keycloak_realm}"
-            "/protocol/openid-connect/certs"
-        )
+        return f"{keycloak_url}/realms/{self.keycloak_realm}/protocol/openid-connect/certs"
 
     @property
     def issuer_url(self) -> str:

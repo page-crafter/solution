@@ -2,7 +2,8 @@ from datetime import datetime
 
 from cm_shared.db.session import SessionLocal
 from cm_shared.models.confluence import ConfluencePage
-from cm_shared.models.page_editor import DraftArtifact, PageProposal, PageEditRun
+from cm_shared.models.page_editor import DraftArtifact, PageEditRun, PageProposal
+
 from cm_worker.celery_app import celery_app
 from cm_worker.confluence.preview import preview_has_rendered_content, render_storage_preview
 from cm_worker.confluence.publish import publish_generated_page

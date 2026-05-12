@@ -106,9 +106,7 @@ def test_lightrag_payload_sends_current_question_outside_history() -> None:
         {"role": "user", "content": "Previous question"},
         {"role": "assistant", "content": "Previous answer"},
     ]
-    assert "Current question" not in [
-        item["content"] for item in payload["conversation_history"]
-    ]
+    assert "Current question" not in [item["content"] for item in payload["conversation_history"]]
 
 
 def test_chat_stream_events_emits_started_streaming_and_completed_stats(monkeypatch) -> None:

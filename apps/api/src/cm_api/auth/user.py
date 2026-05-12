@@ -12,4 +12,3 @@ class CurrentUser:
 
     def has_role(self, *roles: str) -> bool:
         return bool(self.roles & set(roles))
-

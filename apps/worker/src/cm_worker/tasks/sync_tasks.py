@@ -27,9 +27,7 @@ from cm_worker.tasks.history import mark_task_finished, mark_task_running
 def refresh_tree_metadata(session, client: ConfluenceClient) -> None:
     """Refresh parent/order metadata without touching LightRAG."""
     tree = client.scan_space_page_tree()
-    pages = session.scalars(
-        select(ConfluencePage).where(ConfluencePage.deleted_at.is_(None))
-    ).all()
+    pages = session.scalars(select(ConfluencePage).where(ConfluencePage.deleted_at.is_(None))).all()
     for page in pages:
         node = tree.get(page.confluence_id)
         if node is None:
@@ -187,8 +185,7 @@ def refresh_page(run_id: str, page_id: int) -> None:
             )
             run.status = "completed"
             run.message = (
-                f"Refreshed page and submitted "
-                f"{lightrag_result.submitted_count} LightRAG document"
+                f"Refreshed page and submitted {lightrag_result.submitted_count} LightRAG document"
             )
             add_event(session, run_id, run.message)
             mark_task_finished(
@@ -304,9 +301,7 @@ def delete_page(run_id: str, page_id: int) -> None:
             page.deleted_at = datetime.utcnow()
             refresh_tree_metadata(session, client)
             run.status = "completed"
-            run.message = (
-                f"Deleted page and removed {deleted_lightrag_docs} LightRAG document"
-            )
+            run.message = f"Deleted page and removed {deleted_lightrag_docs} LightRAG document"
             add_event(session, run_id, run.message)
             mark_task_finished(
                 session,

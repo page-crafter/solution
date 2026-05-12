@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -55,7 +55,7 @@ def enqueue_task_for_job(
             job.message = error_message
         if hasattr(job, "error_message"):
             job.error_message = error_message
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         execution.status = "failed"
         execution.message = error_message
         execution.finished_at = now

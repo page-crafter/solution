@@ -19,7 +19,8 @@ def build_proposal_prompt(base_markdown: str, instruction: str) -> str:
         "Return only JSON with two string keys: summary and markdown.\n"
         "The markdown value must be the complete updated document, not a patch.\n"
         "Use only the current page content and the requested edit.\n"
-        "Preserve all existing sections, wording, and prior edits unless the request explicitly changes them.\n"
+        "Preserve all existing sections, wording, and prior edits "
+        "unless the request explicitly changes them.\n"
         "Preserve existing facts unless the request explicitly changes them.\n\n"
         f"Requested edit:\n{instruction}\n\n"
         f"Current page Markdown or extracted text:\n{base_markdown}\n"
@@ -63,7 +64,9 @@ def parse_edit_response(value: str) -> ProposalDraft:
         return {"summary": "Prepared an updated Markdown draft.", "markdown": value.strip()}
 
     return {
-        "summary": summary if isinstance(summary, str) and summary.strip() else "Prepared an updated Markdown draft.",
+        "summary": summary
+        if isinstance(summary, str) and summary.strip()
+        else "Prepared an updated Markdown draft.",
         "markdown": markdown.strip(),
     }
 

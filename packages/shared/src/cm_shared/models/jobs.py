@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from sqlalchemy import DateTime, String, Text
@@ -20,10 +19,10 @@ class SyncRun(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_uuid)
     status: Mapped[str] = mapped_column(String(64), default="queued")
-    task_id: Mapped[Optional[str]] = mapped_column(String(128))
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    message: Mapped[Optional[str]] = mapped_column(Text)
+    task_id: Mapped[str | None] = mapped_column(String(128))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+    message: Mapped[str | None] = mapped_column(Text)
 
 
 class JobEvent(Base):
@@ -45,14 +44,14 @@ class TaskExecution(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     job_id: Mapped[str] = mapped_column(String(128), index=True)
-    task_id: Mapped[Optional[str]] = mapped_column(String(128), index=True)
+    task_id: Mapped[str | None] = mapped_column(String(128), index=True)
     task_name: Mapped[str] = mapped_column(String(255), index=True)
     actor: Mapped[str] = mapped_column(String(255), default="system")
     status: Mapped[str] = mapped_column(String(64), default="queued", index=True)
-    message: Mapped[Optional[str]] = mapped_column(Text)
+    message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
@@ -70,5 +69,5 @@ class AuditEvent(Base):
     action: Mapped[str] = mapped_column(String(255))
     target_type: Mapped[str] = mapped_column(String(128))
     target_id: Mapped[str] = mapped_column(String(128))
-    detail: Mapped[Optional[str]] = mapped_column(Text)
+    detail: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

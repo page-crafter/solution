@@ -10,10 +10,7 @@ def create_database_schema() -> None:
     Base.metadata.create_all(bind=engine)
     with engine.begin() as connection:
         connection.execute(
-            text(
-                "ALTER TABLE confluence_pages "
-                "ADD COLUMN IF NOT EXISTS space_name VARCHAR(255)"
-            )
+            text("ALTER TABLE confluence_pages ADD COLUMN IF NOT EXISTS space_name VARCHAR(255)")
         )
         connection.execute(
             text(
@@ -34,10 +31,7 @@ def create_database_schema() -> None:
             )
         )
         connection.execute(
-            text(
-                "ALTER TABLE confluence_pages "
-                "DROP COLUMN IF EXISTS has_confluence_draft"
-            )
+            text("ALTER TABLE confluence_pages DROP COLUMN IF EXISTS has_confluence_draft")
         )
         connection.execute(
             text(
@@ -172,8 +166,7 @@ def create_database_schema() -> None:
         )
         connection.execute(
             text(
-                "ALTER TABLE draft_artifacts "
-                "DROP CONSTRAINT IF EXISTS draft_artifacts_run_id_fkey"
+                "ALTER TABLE draft_artifacts DROP CONSTRAINT IF EXISTS draft_artifacts_run_id_fkey"
             )
         )
         connection.execute(
@@ -184,10 +177,7 @@ def create_database_schema() -> None:
             )
         )
         connection.execute(
-            text(
-                "ALTER TABLE draft_versions "
-                "DROP CONSTRAINT IF EXISTS draft_versions_run_id_fkey"
-            )
+            text("ALTER TABLE draft_versions DROP CONSTRAINT IF EXISTS draft_versions_run_id_fkey")
         )
         connection.execute(
             text(

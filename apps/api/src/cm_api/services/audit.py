@@ -1,6 +1,5 @@
-from sqlalchemy.orm import Session
-
 from cm_shared.models.jobs import AuditEvent
+from sqlalchemy.orm import Session
 
 
 def record_audit(
@@ -21,4 +20,3 @@ def record_audit(
             detail=detail,
         )
     )
-

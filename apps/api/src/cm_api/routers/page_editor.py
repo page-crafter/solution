@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cm_shared.db.session import get_session
 from cm_shared.jobs.history import cancel_active_task_executions
@@ -6,11 +6,11 @@ from cm_shared.models.confluence import ConfluencePage
 from cm_shared.models.page_editor import DraftArtifact, DraftVersion, PageEditRun, PageProposal
 from cm_shared.schemas.page_editor import (
     ApplyProposalResponse,
-    CreateProposalRequest,
     CreatePageEditRunRequest,
+    CreateProposalRequest,
     DraftVersionRead,
-    PageProposalRead,
     PageEditRunRead,
+    PageProposalRead,
     UpdateDraftRequest,
 )
 from fastapi import APIRouter, Depends, HTTPException
@@ -120,7 +120,7 @@ def reset_run_for_markdown_edit(
     run.draft_status = "Draft generated"
     run.preview_status = "rendering"
     run.status = "converting"
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = datetime.now(UTC)
     session.execute(delete(DraftArtifact).where(DraftArtifact.run_id == run.id))
 
 
@@ -372,7 +372,7 @@ def apply_proposal(
     create_draft_version(session, run, "proposal", user.email, proposal_id=proposal.id)
     page.draft_state = "Draft generated"
     proposal.status = "applied"
-    proposal.updated_at = datetime.now(timezone.utc)
+    proposal.updated_at = datetime.now(UTC)
     record_audit(session, user.email, "proposal.applied", "proposal", proposal.id)
     enqueue_task_for_job(
         session,
@@ -408,7 +408,7 @@ def reject_proposal(
             message="Rejected by user",
         )
     proposal.status = "rejected"
-    proposal.updated_at = datetime.now(timezone.utc)
+    proposal.updated_at = datetime.now(UTC)
     record_audit(session, user.email, "proposal.rejected", "proposal", proposal.id)
     session.commit()
     session.refresh(proposal)
@@ -535,7 +535,7 @@ def reset_page_draft(
         run.preview_html = None
         run.diff_text = None
         run.error_message = None
-        run.updated_at = datetime.now(timezone.utc)
+        run.updated_at = datetime.now(UTC)
 
     page.draft_state = "Published"
     record_audit(session, user.email, "draft.reset", "confluence_page", str(page_id))

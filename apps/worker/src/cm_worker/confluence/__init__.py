@@ -1,2 +1,1 @@
 """Confluence REST integration modules."""
-

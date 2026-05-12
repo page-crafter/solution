@@ -13,7 +13,8 @@ members = [
 
 [dependency-groups]
 dev = [
-  "pytest>=9.0.1"
+  "pytest>=9.0.1",
+  "ruff>=0.9.0"
 ]
 
 [tool.pytest.ini_options]
@@ -30,3 +31,4 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]

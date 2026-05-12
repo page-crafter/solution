@@ -122,7 +122,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          dockerfile: ${{ matrix.dockerfile }}
+          dockerfile: ${{ github.workspace }}/${{ matrix.dockerfile }}
           push: false
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,scope=${{ matrix.service }},mode=max

@@ -1,8 +1,8 @@
-from cm_shared.db.session import get_session
 from cm_shared.confluence.move_validation import (
     PageMoveOutsideSpaceError,
     ensure_move_stays_in_space,
 )
+from cm_shared.db.session import get_session
 from cm_shared.models.confluence import ConfluencePage
 from cm_shared.models.jobs import SyncRun
 from cm_shared.schemas.common import JobRead

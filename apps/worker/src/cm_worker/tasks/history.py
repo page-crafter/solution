@@ -1,8 +1,7 @@
 from celery import current_task
-from sqlalchemy.orm import Session
-
 from cm_shared.jobs.history import finish_task_execution, start_task_execution
 from cm_shared.models.jobs import TaskExecution
+from sqlalchemy.orm import Session
 
 
 def current_task_id() -> str | None:

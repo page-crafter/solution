@@ -78,10 +78,7 @@ def test_publish_page_submits_published_page_to_lightrag(monkeypatch) -> None:
     assert synced_pages == [page]
     assert clear_existing_values == [False]
     assert page.extracted_text == "New text for LightRAG"
-    assert any(
-        message == "Submitting published page to LightRAG"
-        for _level, message in events
-    )
+    assert any(message == "Submitting published page to LightRAG" for _level, message in events)
     assert finished_tasks[-1]["status"] == "completed"
     assert "submitted 1 LightRAG document" in finished_tasks[-1]["message"]
 

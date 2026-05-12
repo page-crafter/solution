@@ -1,14 +1,14 @@
+from cm_shared.db.session import get_session
+from cm_shared.jobs.history import cancel_active_task_executions
+from cm_shared.models.jobs import JobEvent, SyncRun, TaskExecution
+from cm_shared.models.page_editor import PageEditRun
+from cm_shared.schemas.common import JobEventRead, JobRead, TaskExecutionRead
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from cm_api.auth.dependencies import require_admin
 from cm_api.services.queue import revoke_task
-from cm_shared.db.session import get_session
-from cm_shared.jobs.history import cancel_active_task_executions
-from cm_shared.models.jobs import JobEvent, SyncRun, TaskExecution
-from cm_shared.models.page_editor import PageEditRun
-from cm_shared.schemas.common import JobEventRead, JobRead, TaskExecutionRead
 
 router = APIRouter(tags=["jobs"])
 
@@ -27,10 +27,7 @@ def list_task_history(
 ) -> list[TaskExecutionRead]:
     """Return recent worker task executions across sync, page editing, and chat."""
     executions = session.scalars(
-        select(TaskExecution)
-        .order_by(TaskExecution.created_at.desc())
-        .limit(limit)
-        .offset(offset)
+        select(TaskExecution).order_by(TaskExecution.created_at.desc()).limit(limit).offset(offset)
     ).all()
     return list(executions)
 

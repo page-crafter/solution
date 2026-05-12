@@ -1,12 +1,12 @@
+from cm_shared.db.session import get_session
+from cm_shared.models.confluence import ConfluencePage
+from cm_shared.models.page_editor import PageEditRun
+from cm_shared.schemas.kpis import SpaceStat
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from cm_api.auth.dependencies import require_admin
-from cm_shared.db.session import get_session
-from cm_shared.models.confluence import ConfluencePage
-from cm_shared.models.page_editor import PageEditRun
-from cm_shared.schemas.kpis import SpaceStat
 
 router = APIRouter(tags=["spaces"])
 
@@ -22,9 +22,9 @@ def list_space_stats(
             ConfluencePage.space_key,
             func.max(ConfluencePage.space_name).label("space_name"),
             func.count().label("page_count"),
-            func.count(
-                ConfluencePage.id.distinct()
-            ).filter(ConfluencePage.extracted_text != "").label("indexed_count"),
+            func.count(ConfluencePage.id.distinct())
+            .filter(ConfluencePage.extracted_text != "")
+            .label("indexed_count"),
             func.max(ConfluencePage.last_synced_at).label("last_synced_at"),
         )
         .where(ConfluencePage.deleted_at.is_(None))

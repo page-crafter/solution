@@ -3,7 +3,6 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
-
 from cm_shared.settings.app import get_settings
 
 

@@ -9,10 +9,11 @@ from cm_shared.models.chat import ChatMessage, ChatSession
 from cm_shared.models.confluence import ConfluencePage
 from cm_shared.schemas.chat import (
     ChatMessageRead,
-    ChatStreamRequest,
     ChatSessionRead,
+    ChatStreamRequest,
     CreateChatSessionRequest,
 )
+from cm_shared.settings.app import get_settings
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
@@ -21,7 +22,6 @@ from sqlalchemy.orm import Session
 from cm_api.auth.dependencies import get_current_user
 from cm_api.auth.user import CurrentUser
 from cm_api.services.lightrag import stream_lightrag_query
-from cm_shared.settings.app import get_settings
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -36,10 +36,7 @@ def full_conversation_history(
 ) -> list[dict[str, str]]:
     """Return all previous user/assistant messages in LightRAG history format."""
     relevant = [message for message in messages if message.role in {"user", "assistant"}]
-    return [
-        {"role": message.role, "content": message.content}
-        for message in relevant
-    ]
+    return [{"role": message.role, "content": message.content} for message in relevant]
 
 
 def conversation_history_characters(history: list[dict[str, str]]) -> int:
@@ -178,9 +175,7 @@ def hydrate_citations(
 ) -> list[dict[str, Any]]:
     """Add Confluence browser links to persisted citations when possible."""
     confluence_ids = {
-        str(citation["confluenceId"])
-        for citation in citations
-        if citation.get("confluenceId")
+        str(citation["confluenceId"]) for citation in citations if citation.get("confluenceId")
     }
     pages = pages_by_confluence_id(session, confluence_ids)
 
@@ -205,7 +200,8 @@ def serialize_chat_message(session: Session, message: ChatMessage) -> ChatMessag
     """Serialize a chat message and backfill citation links for older rows."""
     citations = hydrate_citations(session, parse_citations_json(message.citations_json))
     serialized = ChatMessageRead.model_validate(message)
-    return serialized.model_copy(update={"citations_json": json.dumps(citations, ensure_ascii=False)})
+    citations_json = json.dumps(citations, ensure_ascii=False)
+    return serialized.model_copy(update={"citations_json": citations_json})
 
 
 def integer_value(value: Any) -> int | None:

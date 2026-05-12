@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
 
@@ -12,15 +12,15 @@ class PageRead(OrmModel):
     id: int
     confluence_id: str
     space_key: str
-    space_name: Optional[str] = None
-    parent_confluence_id: Optional[str] = None
+    space_name: str | None = None
+    parent_confluence_id: str | None = None
     sort_order: int = 0
     title: str
     status: str
     version_number: int
-    web_url: Optional[str] = None
-    edit_url: Optional[str] = None
-    tiny_url: Optional[str] = None
+    web_url: str | None = None
+    edit_url: str | None = None
+    tiny_url: str | None = None
     is_placeholder: bool = False
     draft_state: str
     last_synced_at: datetime
@@ -36,13 +36,13 @@ class PageDetail(PageRead):
 class MovePageRequest(BaseModel):
     """Describe a request to move a page relative to another Confluence page."""
 
-    target_id: Optional[str] = None
-    target_parent_id: Optional[str] = None
+    target_id: str | None = None
+    target_parent_id: str | None = None
     position: Literal["append", "before", "after"] = "append"
 
     @field_validator("target_id", "target_parent_id")
     @classmethod
-    def normalize_optional_id(cls, value: Optional[str]) -> Optional[str]:
+    def normalize_optional_id(cls, value: str | None) -> str | None:
         """Trim optional Confluence ids and convert blanks to None."""
         if value is None:
             return None
@@ -62,7 +62,7 @@ class CreatePageRequest(BaseModel):
     """Describe an empty Confluence page to create for later processing."""
 
     title: str
-    parent_id: Optional[str] = None
+    parent_id: str | None = None
 
     @field_validator("title")
     @classmethod
@@ -75,7 +75,7 @@ class CreatePageRequest(BaseModel):
 
     @field_validator("parent_id")
     @classmethod
-    def normalize_parent_id(cls, value: Optional[str]) -> Optional[str]:
+    def normalize_parent_id(cls, value: str | None) -> str | None:
         """Trim optional parent ids and convert blanks to None."""
         if value is None:
             return None

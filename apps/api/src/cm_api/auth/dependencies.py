@@ -2,12 +2,12 @@ import logging
 from typing import Annotated, Any
 
 import jwt
+from cm_shared.settings.app import get_settings
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
 
 from cm_api.auth.user import CurrentUser
-from cm_shared.settings.app import get_settings
 
 bearer = HTTPBearer(auto_error=True)
 logger = logging.getLogger(__name__)
@@ -57,4 +57,3 @@ def _require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser
 
 
 require_admin = Depends(_require_admin)
-

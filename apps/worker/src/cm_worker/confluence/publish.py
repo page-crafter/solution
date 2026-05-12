@@ -1,7 +1,7 @@
-from sqlalchemy.orm import Session
-
 from cm_shared.models.confluence import ConfluencePage
 from cm_shared.models.page_editor import PageEditRun
+from sqlalchemy.orm import Session
+
 from cm_worker.confluence.client import ConfluenceClient
 
 

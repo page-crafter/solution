@@ -88,9 +88,7 @@ def upsert_page_with_status(
     )
     version_number = int(page_payload.get("version", {}).get("number", 1))
     content_changed = (
-        page is None
-        or page.deleted_at is not None
-        or page.version_number != version_number
+        page is None or page.deleted_at is not None or page.version_number != version_number
     )
     if page is None:
         page = ConfluencePage(confluence_id=confluence_id, space_key="")

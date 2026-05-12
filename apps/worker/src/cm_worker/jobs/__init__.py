@@ -1,2 +1,1 @@
 """Worker job progress helpers."""
-

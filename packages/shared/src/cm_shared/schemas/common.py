@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -25,14 +24,14 @@ class TaskExecutionRead(OrmModel):
 
     id: int
     job_id: str
-    task_id: Optional[str] = None
+    task_id: str | None = None
     task_name: str
     actor: str
     status: str
-    message: Optional[str] = None
+    message: str | None = None
     created_at: datetime
-    started_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
     updated_at: datetime
 
 
@@ -41,5 +40,5 @@ class JobRead(OrmModel):
 
     id: str
     status: str
-    task_id: Optional[str] = None
-    message: Optional[str] = None
+    task_id: str | None = None
+    message: str | None = None

@@ -62,11 +62,7 @@ def test_format_storage_xhtml_for_diff_splits_storage_tags() -> None:
     formatted = format_storage_xhtml_for_diff('<p>Hello</p><ac:structured-macro ac:name="toc" />')
 
     assert formatted == (
-        "<p>\n"
-        " Hello\n"
-        "</p>\n"
-        '<ac:structured-macro ac:name="toc">\n'
-        "</ac:structured-macro>\n"
+        '<p>\n Hello\n</p>\n<ac:structured-macro ac:name="toc">\n</ac:structured-macro>\n'
     )
 
 
@@ -128,7 +124,9 @@ def test_move_page_uses_data_center_legacy_action() -> None:
 
     def request_text(method: str, path: str, **kwargs) -> str:
         legacy_calls.append({"method": method, "path": path, **kwargs})
-        return '{"valid": true, "authorized": true, "progressMeter": {"completedSuccessfully": true}}'
+        return (
+            '{"valid": true, "authorized": true, "progressMeter": {"completedSuccessfully": true}}'
+        )
 
     client.request = request
     client.get_page_space_key = get_page_space_key

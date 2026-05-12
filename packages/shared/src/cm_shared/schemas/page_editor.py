@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,9 +22,9 @@ class CreateProposalRequest(BaseModel):
     """Request body for asking the LLM to propose Markdown changes."""
 
     message: str = Field(..., max_length=2_000)
-    base_proposal_id: Optional[str] = Field(None, max_length=36)
-    base_run_id: Optional[str] = Field(None, max_length=36)
-    base_markdown: Optional[str] = Field(None, max_length=500_000)
+    base_proposal_id: str | None = Field(None, max_length=36)
+    base_run_id: str | None = Field(None, max_length=36)
+    base_markdown: str | None = Field(None, max_length=500_000)
 
 
 class PageEditRunRead(OrmModel):
@@ -38,11 +37,11 @@ class PageEditRunRead(OrmModel):
     draft_status: str
     preview_status: str
     source_version: int
-    markdown_draft: Optional[str] = None
-    generated_storage_xhtml: Optional[str] = None
-    preview_html: Optional[str] = None
-    diff_text: Optional[str] = None
-    error_message: Optional[str] = None
+    markdown_draft: str | None = None
+    generated_storage_xhtml: str | None = None
+    preview_html: str | None = None
+    diff_text: str | None = None
+    error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -52,15 +51,15 @@ class PageProposalRead(OrmModel):
 
     id: str
     page_id: int
-    run_id: Optional[str] = None
+    run_id: str | None = None
     instruction: str
     base_markdown: str
     base_source: str
     status: str
-    proposed_markdown: Optional[str] = None
-    diff_text: Optional[str] = None
-    summary: Optional[str] = None
-    error_message: Optional[str] = None
+    proposed_markdown: str | None = None
+    diff_text: str | None = None
+    summary: str | None = None
+    error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -74,8 +73,8 @@ class DraftVersionRead(OrmModel):
     markdown_draft: str
     change_source: str
     actor: str
-    proposal_id: Optional[str] = None
-    restored_from_version_id: Optional[int] = None
+    proposal_id: str | None = None
+    restored_from_version_id: int | None = None
     created_at: datetime
 
 

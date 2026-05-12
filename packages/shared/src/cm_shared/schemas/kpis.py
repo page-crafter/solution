@@ -49,4 +49,3 @@ class LightRagStatus(BaseModel):
     embedding_model: str
     pipeline: LightRagPipelineStatus
     doc_counts: LightRagDocCounts
-

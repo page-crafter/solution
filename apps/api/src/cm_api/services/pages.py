@@ -1,7 +1,6 @@
+from cm_shared.models.confluence import ConfluencePage
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
-from cm_shared.models.confluence import ConfluencePage
 
 
 def get_active_page(session: Session, page_id: int) -> ConfluencePage:

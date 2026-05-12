@@ -5,7 +5,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, NavigableString
-
 from cm_shared.settings.app import get_settings
 
 

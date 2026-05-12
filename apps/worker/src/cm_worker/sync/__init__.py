@@ -1,2 +1,1 @@
 """Confluence synchronization modules."""
-

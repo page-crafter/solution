@@ -157,9 +157,7 @@ class LightRagClient:
             page_documents = response.get("documents", [])
             if not isinstance(page_documents, list):
                 raise RuntimeError("LightRAG returned invalid documents pagination data")
-            documents.extend(
-                document for document in page_documents if isinstance(document, dict)
-            )
+            documents.extend(document for document in page_documents if isinstance(document, dict))
             pagination = response.get("pagination") or {}
             if not isinstance(pagination, dict) or not pagination.get("has_next"):
                 return documents

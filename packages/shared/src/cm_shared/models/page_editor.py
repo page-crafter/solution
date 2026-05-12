@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -20,12 +19,12 @@ class PageEditRun(Base):
     draft_status: Mapped[str] = mapped_column(String(64), default="Draft in progress")
     preview_status: Mapped[str] = mapped_column(String(64), default="not_started")
     source_version: Mapped[int] = mapped_column(Integer)
-    task_id: Mapped[Optional[str]] = mapped_column(String(128))
-    markdown_draft: Mapped[Optional[str]] = mapped_column(Text)
-    generated_storage_xhtml: Mapped[Optional[str]] = mapped_column(Text)
-    preview_html: Mapped[Optional[str]] = mapped_column(Text)
-    diff_text: Mapped[Optional[str]] = mapped_column(Text)
-    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    task_id: Mapped[str | None] = mapped_column(String(128))
+    markdown_draft: Mapped[str | None] = mapped_column(Text)
+    generated_storage_xhtml: Mapped[str | None] = mapped_column(Text)
+    preview_html: Mapped[str | None] = mapped_column(Text)
+    diff_text: Mapped[str | None] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -67,10 +66,10 @@ class DraftVersion(Base):
     markdown_draft: Mapped[str] = mapped_column(Text)
     change_source: Mapped[str] = mapped_column(String(64))
     actor: Mapped[str] = mapped_column(String(255), default="system")
-    proposal_id: Mapped[Optional[str]] = mapped_column(
+    proposal_id: Mapped[str | None] = mapped_column(
         ForeignKey("page_proposals.id", ondelete="SET NULL")
     )
-    restored_from_version_id: Mapped[Optional[int]] = mapped_column(
+    restored_from_version_id: Mapped[int | None] = mapped_column(
         ForeignKey("draft_versions.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -85,17 +84,15 @@ class PageProposal(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=make_uuid)
     page_id: Mapped[int] = mapped_column(ForeignKey("confluence_pages.id", ondelete="CASCADE"))
-    run_id: Mapped[Optional[str]] = mapped_column(
-        ForeignKey("page_edit_runs.id", ondelete="SET NULL")
-    )
+    run_id: Mapped[str | None] = mapped_column(ForeignKey("page_edit_runs.id", ondelete="SET NULL"))
     instruction: Mapped[str] = mapped_column(Text)
     base_markdown: Mapped[str] = mapped_column(Text, default="")
     base_source: Mapped[str] = mapped_column(String(32), default="page")
     status: Mapped[str] = mapped_column(String(64), default="queued")
-    task_id: Mapped[Optional[str]] = mapped_column(String(128))
-    proposed_markdown: Mapped[Optional[str]] = mapped_column(Text)
-    diff_text: Mapped[Optional[str]] = mapped_column(Text)
-    summary: Mapped[Optional[str]] = mapped_column(Text)
-    error_message: Mapped[Optional[str]] = mapped_column(Text)
+    task_id: Mapped[str | None] = mapped_column(String(128))
+    proposed_markdown: Mapped[str | None] = mapped_column(Text)
+    diff_text: Mapped[str | None] = mapped_column(Text)
+    summary: Mapped[str | None] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

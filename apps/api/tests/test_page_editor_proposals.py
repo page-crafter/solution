@@ -2,8 +2,6 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
-from fastapi import HTTPException
-
 from cm_api.main import create_app
 from cm_api.routers.page_editor import (
     apply_proposal,
@@ -13,8 +11,9 @@ from cm_api.routers.page_editor import (
     update_draft,
 )
 from cm_shared.models.confluence import ConfluencePage
-from cm_shared.models.page_editor import DraftVersion, PageProposal, PageEditRun
+from cm_shared.models.page_editor import DraftVersion, PageEditRun, PageProposal
 from cm_shared.schemas.page_editor import CreateProposalRequest, UpdateDraftRequest
+from fastapi import HTTPException
 
 
 def test_page_editor_routes_are_canonical_without_legacy_paths() -> None:
@@ -299,9 +298,10 @@ def test_create_manual_draft_queues_render_without_generation(monkeypatch) -> No
     assert run.status == "converting"
     assert run.preview_status == "rendering"
     assert page.draft_state == "Draft generated"
-    assert [(version.version_number, version.change_source, version.markdown_draft) for version in session.versions] == [
-        (1, "manual", "# Manual edit")
-    ]
+    assert [
+        (version.version_number, version.change_source, version.markdown_draft)
+        for version in session.versions
+    ] == [(1, "manual", "# Manual edit")]
     assert queued == {
         "job_id": "run-manual",
         "task_name": "cm_worker.render_draft",

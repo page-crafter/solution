@@ -1,9 +1,19 @@
+from cm_shared.db.init import create_database_schema
+from cm_shared.settings.app import get_settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from cm_api.routers import auth, chat, confluence, jobs, kpis, lightrag_status, page_editor, spaces, sync
-from cm_shared.db.init import create_database_schema
-from cm_shared.settings.app import get_settings
+from cm_api.routers import (
+    auth,
+    chat,
+    confluence,
+    jobs,
+    kpis,
+    lightrag_status,
+    page_editor,
+    spaces,
+    sync,
+)
 
 
 def create_app() -> FastAPI:

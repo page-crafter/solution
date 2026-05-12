@@ -1,2 +1,1 @@
 """Documentation page editor modules."""
-

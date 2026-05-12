@@ -1,6 +1,5 @@
 from celery import Celery
 from celery.schedules import crontab
-
 from cm_shared.settings.app import get_settings
 
 

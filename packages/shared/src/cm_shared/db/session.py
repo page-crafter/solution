@@ -16,11 +16,10 @@ engine = build_engine()
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
 
 
-def get_session() -> Generator[Session, None, None]:
+def get_session() -> Generator[Session]:
     """Yield a database session and guarantee cleanup after request handling."""
     session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
-
