@@ -9,7 +9,7 @@ RUN npm ci
 COPY apps/web apps/web
 RUN npm run build:web
 
-FROM nginx:alpine AS runtime
+FROM nginxinc/nginx-unprivileged:latest AS runtime
 
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

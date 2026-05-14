@@ -1,0 +1,48 @@
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+import { vuetify } from '../../plugins/vuetify'
+import EmptyState from './EmptyState.vue'
+import JobStatusChip from './JobStatusChip.vue'
+import PageHeader from './PageHeader.vue'
+
+describe('common UI components', () => {
+  it('renders a page header with action slot content', () => {
+    const wrapper = mount(PageHeader, {
+      props: {
+        title: 'Pages',
+        description: 'Browse synced pages.',
+      },
+      slots: {
+        actions: '<button>Refresh</button>',
+      },
+      global: { plugins: [vuetify] },
+    })
+
+    expect(wrapper.text()).toContain('Pages')
+    expect(wrapper.text()).toContain('Browse synced pages.')
+    expect(wrapper.text()).toContain('Refresh')
+  })
+
+  it('renders a reusable empty state', () => {
+    const wrapper = mount(EmptyState, {
+      props: {
+        icon: 'mdi-file-search-outline',
+        title: 'No results',
+        message: 'Try another filter.',
+      },
+      global: { plugins: [vuetify] },
+    })
+
+    expect(wrapper.text()).toContain('No results')
+    expect(wrapper.text()).toContain('Try another filter.')
+  })
+
+  it('maps job status into a chip label', () => {
+    const wrapper = mount(JobStatusChip, {
+      props: { status: 'failed' },
+      global: { plugins: [vuetify] },
+    })
+
+    expect(wrapper.text()).toContain('failed')
+  })
+})

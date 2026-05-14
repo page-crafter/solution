@@ -6,3 +6,8 @@ if (!globalThis.ResizeObserver) {
     disconnect() {}
   }
 }
+
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  configurable: true,
+  value: () => null,
+})

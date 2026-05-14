@@ -56,6 +56,7 @@ const resolvedColor = computed(() => toneConfig.value.color)
 const resolvedIcon = computed(() => props.icon ?? toneConfig.value.icon)
 const isPersistent = computed(() => props.persistent || props.loading)
 
+/** Closes the dialog and notifies the parent unless a confirm action is loading. */
 function cancel(): void {
   if (props.loading) return
   isOpen.value = false

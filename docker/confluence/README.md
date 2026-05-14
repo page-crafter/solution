@@ -1,0 +1,1 @@
+java -jar /atlassian-agent.jar -d -p conf -m aaa@bbb.com -n my_name -o http://localhost:8090 -s ABCD-1234-EFGH-5678

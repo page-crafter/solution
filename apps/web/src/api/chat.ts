@@ -26,6 +26,7 @@ export interface ChatStreamHandlers {
   onError?: (error: string) => void
 }
 
+/** Dispatches one parsed NDJSON stream event to the matching optional handler. */
 function handleStreamEvent(event: ChatStreamEvent, handlers: ChatStreamHandlers): void {
   if ('delta' in event) {
     handlers.onDelta?.(event.delta)

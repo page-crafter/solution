@@ -25,7 +25,7 @@ Syncs pages, indexes them for semantic search, generates Markdown drafts via LLM
 | Cache / broker | Redis 7                                 |
 | RAG engine     | LightRAG                                |
 | Auth           | Keycloak 26                             |
-| Runtime        | Docker, uv, nginx                       |
+| Runtime        | Docker, uv, FastAPI static serving      |
 
 ## Quick start
 
@@ -42,7 +42,7 @@ cp .env.example .env
 # Required: CONFLUENCE_PAT, OPENAI_API_KEY (or Ollama settings)
 ```
 
-Frontend browser configuration lives in `apps/web/public/config.json`. Update its backend base URL and Keycloak settings when exposing the stack on different hosts.
+Frontend browser configuration lives in `apps/web/public/config.json`. The Docker build copies it into the Vue bundle served by FastAPI.
 
 ### 2. Start infrastructure
 
@@ -59,7 +59,7 @@ docker compose up -d
 
 | Service  | URL                        |
 | -------- | -------------------------- |
-| Frontend | http://localhost           |
+| Frontend | http://localhost:8000      |
 | API docs | http://localhost:8000/docs |
 | Keycloak | http://localhost:8080      |
 
@@ -85,7 +85,7 @@ uv run celery -A cm_worker.celery_app beat --loglevel=info
 
 # Frontend
 npm install
-npm run dev:web   # http://localhost:5173
+npm run dev:web   # http://localhost:5173, proxies /api to localhost:8000
 ```
 
 ## Repository layout

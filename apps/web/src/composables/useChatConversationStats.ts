@@ -72,6 +72,7 @@ interface StreamTotalsState {
   tokenUsage: ChatStreamTokenUsage | null
 }
 
+/** Creates the neutral live-request stats state used before streaming starts. */
 function createIdleLiveRequest(): LiveRequestState {
   return {
     status: 'idle',
@@ -86,11 +87,13 @@ function createIdleLiveRequest(): LiveRequestState {
   }
 }
 
+/** Counts whitespace-delimited words in text content. */
 function wordCount(value: string): number {
   const trimmed = value.trim()
   return trimmed ? trimmed.split(/\s+/).length : 0
 }
 
+/** Counts parsed citation entries on a persisted chat message. */
 function citationCount(message: ChatMessage): number {
   try {
     const parsed = JSON.parse(message.citations_json)
@@ -100,6 +103,7 @@ function citationCount(message: ChatMessage): number {
   }
 }
 
+/** Creates the neutral aggregate stream totals state. */
 function createStreamTotals(): StreamTotalsState {
   return {
     requestCount: 0,
@@ -115,6 +119,7 @@ function createStreamTotals(): StreamTotalsState {
   }
 }
 
+/** Adds one request's token usage into cumulative token usage totals. */
 function addTokenUsage(
   totalUsage: ChatStreamTokenUsage | null,
   requestUsage: ChatStreamTokenUsage | null | undefined,
@@ -134,6 +139,7 @@ function addTokenUsage(
   return Object.keys(nextUsage).length > 0 ? nextUsage : null
 }
 
+/** Tracks live and cumulative chat conversation metrics for streamed answers. */
 export function useChatConversationStats(
   options: UseChatConversationStatsOptions,
 ): {
@@ -152,12 +158,14 @@ export function useChatConversationStats(
   const clockTick = shallowRef(Date.now())
   let timerId: number | undefined
 
+  /** Computes elapsed time for the active or last finished live request. */
   function activeElapsedMs(): number {
     const live = liveRequest.value
     if (!live.startedAt) return live.elapsedMs
     return Math.max(0, (live.finishedAt ?? clockTick.value) - live.startedAt)
   }
 
+  /** Starts the short interval clock used while a request is streaming. */
   function startClock(): void {
     stopClock()
     clockTick.value = Date.now()
@@ -166,16 +174,19 @@ export function useChatConversationStats(
     }, 250)
   }
 
+  /** Stops the live request interval clock. */
   function stopClock(): void {
     if (timerId === undefined) return
     window.clearInterval(timerId)
     timerId = undefined
   }
 
+  /** Patches live request state while preserving Vue change detection. */
   function patchLiveRequest(patch: Partial<LiveRequestState>): void {
     liveRequest.value = { ...liveRequest.value, ...patch }
   }
 
+  /** Adds a completed live request into cumulative stream totals once. */
   function addLiveRequestToTotals(live: LiveRequestState, elapsedMs: number): void {
     if (live.countedInTotals) return
     streamTotals.value = {
@@ -192,6 +203,7 @@ export function useChatConversationStats(
     }
   }
 
+  /** Marks the live request completed or failed, records totals, and stops the clock. */
   function finishRequest(status: Exclude<ChatStatsStatus, 'idle' | 'streaming'>, error?: string): void {
     const live = liveRequest.value
     if (live.status === status || (live.status === 'failed' && status === 'completed')) return
@@ -210,6 +222,7 @@ export function useChatConversationStats(
     stopClock()
   }
 
+  /** Starts tracking metrics for a newly submitted chat request. */
   function beginRequest(): void {
     liveRequest.value = {
       ...createIdleLiveRequest(),
@@ -219,6 +232,7 @@ export function useChatConversationStats(
     startClock()
   }
 
+  /** Records one streamed text delta and increments chunk counts. */
   function recordDelta(delta: string): void {
     const live = liveRequest.value
     patchLiveRequest({
@@ -227,10 +241,12 @@ export function useChatConversationStats(
     })
   }
 
+  /** Records the latest reference count reported by the streaming backend. */
   function recordReferences(references: Record<string, unknown>[]): void {
     patchLiveRequest({ referenceCount: references.length })
   }
 
+  /** Records backend-reported stream metrics and reacts to terminal phases. */
   function recordServerStats(stats: ChatStreamStats): void {
     patchLiveRequest({
       historyMessageCount: stats.historyMessageCount,
@@ -252,6 +268,7 @@ export function useChatConversationStats(
     }
   }
 
+  /** Marks the live request failed and increments the conversation error count once. */
   function recordStreamError(error: string): void {
     if (liveRequest.value.status !== 'failed') {
       errorCount.value += 1
@@ -259,10 +276,12 @@ export function useChatConversationStats(
     finishRequest('failed', error)
   }
 
+  /** Marks the live request successfully completed. */
   function completeRequest(): void {
     finishRequest('completed')
   }
 
+  /** Clears live and cumulative metrics, including the active clock. */
   function resetStats(): void {
     stopClock()
     liveRequest.value = createIdleLiveRequest()

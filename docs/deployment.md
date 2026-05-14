@@ -12,7 +12,7 @@
 cp .env.example .env
 # Edit .env — at minimum set CONFLUENCE_PAT and OPENAI_API_KEY (or Ollama settings)
 
-docker compose up -d postgres redis keycloak
+docker compose up -d postgres redis keycloak lightrag
 docker compose build
 docker compose up -d
 ```
@@ -21,7 +21,7 @@ Services available after startup:
 
 | URL                        | Service                |
 | -------------------------- | ---------------------- |
-| http://localhost           | Frontend               |
+| http://localhost:8000      | Frontend               |
 | http://localhost:8000/docs | API (Swagger UI)       |
 | http://localhost:8080      | Keycloak admin console |
 | http://localhost:9621      | LightRAG API           |
@@ -46,14 +46,13 @@ docker compose build
 # Build one service
 docker compose build api
 docker compose build worker
-docker compose build front
 ```
 
 ### Frontend runtime config
 
-The Vue bundle reads browser-facing settings from `config.json` at startup. Update `apps/web/public/config.json` before building, or replace/mount `/usr/share/nginx/html/config.json` in a running web image to target a different API or Keycloak host without rebuilding the JavaScript bundle.
+The Vue bundle reads browser-facing settings from `/config.json` at startup. Update `apps/web/public/config.json` before building to target a different API or Keycloak host.
 
-The Docker Compose setup mounts `apps/web/public/config.json` into the nginx container so local changes are picked up on refresh.
+The default `backend.baseUrl` is empty, so the browser calls `/api` on the same `http://localhost:8000` origin that serves the frontend.
 
 ## Local development (without Docker)
 
@@ -87,31 +86,27 @@ npm run dev:web        # http://localhost:5173
 
 ## Dockerfile structure
 
-All three Dockerfiles use the **workspace root as build context**. This is required because the Python apps depend on `packages/shared`, which lives outside their own directory.
+The root `Dockerfile` uses the **workspace root as build context**. This is required because the Python apps depend on `packages/shared`, and the final image also embeds the built Vue app.
 
 ```
 docker compose build
   context: .  (workspace root)
-  ├── apps/api/Dockerfile      → installs cm-api + cm-shared via uv
-  ├── apps/worker/Dockerfile   → installs cm-worker + cm-shared via uv
-  └── apps/web/Dockerfile      → node:24 build → nginx:alpine runtime
+  └── Dockerfile
+      ├── web-build stage  → node:24 build of apps/web
+      └── runtime stage    → python:3.13-slim with cm-api, cm-worker, cm-shared, and Vue dist
 ```
 
-### Python images (api, worker)
+### Unified app image
 
-- Base: `python:3.13-slim`
+- Runtime base: `python:3.13-slim`
 - uv copied from `ghcr.io/astral-sh/uv:latest`
-- Dependencies installed with `uv sync --frozen --no-dev --package <name>`
+- Dependencies installed with `uv sync --frozen --no-dev --all-packages`
 - `UV_COMPILE_BYTECODE=1` — bytecode compiled at build time, not first import
 - BuildKit cache mount on `/root/.cache/uv` — fast rebuilds when `uv.lock` unchanged
-
-### Web image
-
-- Stage 1 (`build`): `node:24-alpine` — runs `npm ci` then `npm run build:web`
-- Stage 2 (`runtime`): `nginx:alpine` — serves `dist/` with SPA fallback routing
-- `nginx.conf` sets `try_files $uri $uri/ /index.html` for Vue Router history mode
-- Static assets (`.js`, `.css`, fonts) served with `Cache-Control: public, immutable`
-- `config.json` is served with `Cache-Control: no-store`
+- `api` and `worker` both use `page-crafter:local`
+- `api` runs Uvicorn and serves both `/api/*` and the compiled Vue SPA
+- `worker` runs Celery from the same image with a different Compose command
+- `/config.json` is served by FastAPI with `Cache-Control: no-store`
 
 ## Database migrations
 

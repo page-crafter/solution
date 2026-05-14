@@ -16,6 +16,7 @@ const editorView = shallowRef<EditorView>()
 const editableCompartment = new Compartment()
 const canEdit = computed(() => !props.disabled)
 
+/** Replaces CodeMirror content when the parent model changes externally. */
 function syncExternalValue(value: string): void {
   const view = editorView.value
   if (!view) return
@@ -26,6 +27,7 @@ function syncExternalValue(value: string): void {
   })
 }
 
+/** Wraps the current selection with inline Markdown syntax. */
 function insertMarkdown(prefix: string, suffix = ''): void {
   const view = editorView.value
   if (!view || !canEdit.value) return
@@ -45,6 +47,7 @@ function insertMarkdown(prefix: string, suffix = ''): void {
   view.focus()
 }
 
+/** Inserts a Markdown prefix at the start of the current line. */
 function insertLinePrefix(prefix: string): void {
   const view = editorView.value
   if (!view || !canEdit.value) return
@@ -57,6 +60,7 @@ function insertLinePrefix(prefix: string): void {
   view.focus()
 }
 
+/** Inserts a multi-line Markdown template and places the cursor inside it. */
 function insertBlock(template: string, cursorOffset: number): void {
   const view = editorView.value
   if (!view || !canEdit.value) return

@@ -35,19 +35,23 @@ const numericFields: Array<{ key: SettingKey, label: string, min: number }> = [
   { key: 'max_total_tokens', label: 'Total', min: 1 },
 ]
 
+/** Emits a string setting update from text-like controls. */
 function updateText(key: SettingKey, value: unknown): void {
   emit('updateSetting', key, String(value ?? ''))
 }
 
+/** Emits a retrieval mode update from the mode select. */
 function updateMode(value: unknown): void {
   emit('updateSetting', 'mode', value as ChatQueryMode)
 }
 
+/** Normalizes positive numeric settings before emitting them to the parent. */
 function updateNumber(key: SettingKey, value: unknown): void {
   const nextValue = Number(value)
   emit('updateSetting', key, Number.isFinite(nextValue) && nextValue > 0 ? nextValue : 1)
 }
 
+/** Emits boolean setting updates from toggles and keeps parent state authoritative. */
 function updateBoolean(key: SettingKey, value: unknown): void {
   emit('updateSetting', key, Boolean(value))
 }

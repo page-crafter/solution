@@ -4,7 +4,9 @@ import DOMPurify from 'dompurify'
 import MarkdownIt from 'markdown-it'
 import { computed, shallowRef, watch } from 'vue'
 import type { DraftVersion, PageDetail, PageProposal, PageEditRun } from '../../types/api'
+import { normalizeConfluenceStorageHtml } from '../../utils/confluencePreview'
 import ActionValidationDialog from '../common/ActionValidationDialog.vue'
+import EmptyState from '../common/EmptyState.vue'
 import DraftHistoryDialog from './DraftHistoryDialog.vue'
 import MarkdownEditor from './MarkdownEditor.vue'
 import XhtmlCodeBlock from './XhtmlCodeBlock.vue'
@@ -38,47 +40,6 @@ const markdownRenderer = new MarkdownIt({
   html: false,
   linkify: true,
 })
-
-function isTag(element: Element, tagName: string): boolean {
-  return element.tagName.toLowerCase() === tagName
-}
-
-function childByTag(element: Element, tagName: string): Element | undefined {
-  return Array.from(element.children).find((child) => isTag(child, tagName))
-}
-
-function normalizeConfluenceStorageHtml(storageHtml: string): string {
-  const document = new DOMParser().parseFromString(`<main>${storageHtml}</main>`, 'text/html')
-  const root = document.body.firstElementChild ?? document.body
-  const macros = Array.from(root.querySelectorAll('*')).filter((element) =>
-    isTag(element, 'ac:structured-macro'),
-  )
-
-  for (const macro of macros) {
-    const macroName = macro.getAttribute('ac:name') ?? 'macro'
-    const plainTextBody = childByTag(macro, 'ac:plain-text-body')
-    const richTextBody = childByTag(macro, 'ac:rich-text-body')
-    const bodyText = (plainTextBody?.textContent ?? richTextBody?.textContent ?? macro.textContent ?? '').trim()
-
-    if (macroName === 'code') {
-      const pre = document.createElement('pre')
-      const code = document.createElement('code')
-      code.textContent = bodyText
-      pre.append(code)
-      macro.replaceWith(pre)
-      continue
-    }
-
-    const placeholder = document.createElement('span')
-    placeholder.className = 'confluence-macro'
-    placeholder.textContent = bodyText
-      ? `[Confluence macro: ${macroName}] ${bodyText}`
-      : `[Confluence macro: ${macroName}]`
-    macro.replaceWith(placeholder)
-  }
-
-  return root.innerHTML
-}
 
 const activeMode = shallowRef<WorkspaceMode>('source')
 const historyDialogOpen = shallowRef(false)
@@ -269,10 +230,12 @@ watch(proposalReady, (isReady) => {
             class="markdown-preview markdown-preview--embedded"
             v-html="renderedCurrentPageHtml"
           />
-          <div v-else class="empty-state muted-text">
-            <VIcon icon="mdi-file-document-outline" size="40" color="#dfe1e6" />
-            <span>No extracted page text is available.</span>
-          </div>
+          <EmptyState
+            v-else
+            icon="mdi-file-document-outline"
+            title="No extracted page text"
+            message="No extracted page text is available."
+          />
         </div>
       </VWindowItem>
 
@@ -289,10 +252,12 @@ watch(proposalReady, (isReady) => {
 
       <VWindowItem value="xhtml" class="markdown-workspace__pane">
         <XhtmlCodeBlock v-if="hasStorageXhtml" :code="visibleStorageXhtml" :label="xhtmlLabel" />
-        <div v-else class="empty-state muted-text">
-          <VIcon icon="mdi-code-tags" size="40" color="#dfe1e6" />
-          <span>No Storage XHTML is available yet.</span>
-        </div>
+        <EmptyState
+          v-else
+          icon="mdi-code-tags"
+          title="No Storage XHTML"
+          message="No Storage XHTML is available yet."
+        />
       </VWindowItem>
 
       <VWindowItem value="changes" class="markdown-workspace__pane">
@@ -304,10 +269,12 @@ watch(proposalReady, (isReady) => {
           diff-view-theme="light"
           :diff-view-wrap="true"
         />
-        <div v-else class="empty-state muted-text">
-          <VIcon icon="mdi-source-branch" size="40" color="#dfe1e6" />
-          <span>No changes to review yet.</span>
-        </div>
+        <EmptyState
+          v-else
+          icon="mdi-source-branch"
+          title="No changes"
+          message="No changes to review yet."
+        />
       </VWindowItem>
     </VWindow>
 
@@ -465,18 +432,6 @@ watch(proposalReady, (isReady) => {
   padding: 12px;
   border-radius: 6px;
   background: #f1f2f4;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-height: 320px;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed #dfe1e6;
-  border-radius: 8px;
-  font-size: 13px;
 }
 
 .workspace-loading-overlay {

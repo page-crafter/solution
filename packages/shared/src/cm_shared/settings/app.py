@@ -8,7 +8,6 @@ class AppSettings(BaseSettings):
     """Read environment configuration used by the API and worker processes."""
 
     app_env: str = "local"
-    web_origin: str = "http://localhost:5173"
     database_url: str = "postgresql+psycopg://confluence:confluence@localhost:5432/page_crafter"
     redis_url: str = "redis://localhost:6379/0"
 
@@ -38,6 +37,8 @@ class AppSettings(BaseSettings):
     lightrag_pipeline_timeout_seconds: int = 900
 
     sync_cron: str = "0 2 * * *"
+
+    chat_public_access: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

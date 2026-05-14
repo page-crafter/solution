@@ -2,7 +2,6 @@
 import { computed, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import ChatWidget from '../components/common/ChatWidget.vue'
 import ParticleBackground from '../components/common/ParticleBackground.vue'
 
 const route = useRoute()
@@ -15,7 +14,8 @@ const allItems = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
   { title: 'Pages', icon: 'mdi-file-document-multiple-outline', to: '/pages' },
   { title: 'Chat', icon: 'mdi-message-text-outline', to: '/chat' },
-  { title: 'Runs', icon: 'mdi-timeline-clock-outline', to: '/runs' },
+  { title: 'Integration', icon: 'mdi-code-tags', to: '/integration' },
+  { title: 'Events', icon: 'mdi-timeline-clock-outline', to: '/runs' },
 ]
 
 const items = computed(() => auth.isAdmin ? allItems : [])
@@ -104,8 +104,6 @@ const activeTitle = computed(() => allItems.find((item) => item.to === route.pat
     <VMain>
       <slot />
     </VMain>
-
-    <ChatWidget />
   </template>
 </template>
 

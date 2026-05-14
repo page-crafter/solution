@@ -15,6 +15,7 @@ import { cancelRun, fetchActivePageEditRun } from '../api/pageEditor'
 import ActionValidationDialog from '../components/common/ActionValidationDialog.vue'
 import AppSpinner from '../components/common/AppSpinner.vue'
 import JobStateDialog from '../components/common/JobStateDialog.vue'
+import PageHeader from '../components/common/PageHeader.vue'
 import PageDetailPanel from '../components/pages/PageDetailPanel.vue'
 import PageTree from '../components/pages/PageTree.vue'
 import type { ConfluencePage, JobRead, PageDetail, PageEditRun } from '../types/api'
@@ -163,16 +164,19 @@ async function reloadPagesAfterMutation(): Promise<void> {
   await selectPage(currentPage)
 }
 
+/** Refreshes local page state after a tracked job finishes and closes successful jobs. */
 async function finishPageJob(job: JobRead): Promise<void> {
   await reloadPagesAfterMutation()
   const isError = job.status === 'failed' || job.status === 'blocked'
   if (!isError) clearPageJob()
 }
 
+/** Stores the active page job metadata displayed by the job dialog. */
 function trackPageJob(job: JobRead, title: string, pendingLabel: string): void {
   activePageJob.value = { id: job.id, title, pendingLabel }
 }
 
+/** Clears active page job metadata after the dialog closes. */
 function clearPageJob(): void {
   activePageJob.value = undefined
 }
@@ -241,6 +245,7 @@ function runReorder(intent: PageMoveIntent): void {
   })
 }
 
+/** Queues the already-confirmed reorder action against Confluence. */
 async function confirmReorder(intent: PageMoveIntent): Promise<void> {
   const job = intent.target
     ? await movePage(intent.page.id, intent.target.confluence_id, intent.position)
@@ -263,6 +268,7 @@ function runDelete(page: ConfluencePage): void {
   })
 }
 
+/** Queues the already-confirmed page deletion and clears selection when needed. */
 async function confirmDelete(page: ConfluencePage): Promise<void> {
   const job = await deletePage(page.id)
   trackPageJob(job, 'Deleting page', `Deleting ${page.title}`)
@@ -272,11 +278,13 @@ async function confirmDelete(page: ConfluencePage): Promise<void> {
   }
 }
 
+/** Opens the shared confirmation dialog for destructive or structural page actions. */
 function openActionValidation(action: PendingValidationAction): void {
   pendingValidationAction.value = action
   actionValidationOpen.value = true
 }
 
+/** Executes the currently pending confirmation action and closes the dialog on success. */
 async function confirmPendingAction(): Promise<void> {
   const action = pendingValidationAction.value
   if (!action) return
@@ -293,6 +301,7 @@ async function confirmPendingAction(): Promise<void> {
   }
 }
 
+/** Clears pending validation state unless a confirmation action is still running. */
 function clearPendingAction(): void {
   if (actionValidationLoading.value) return
   pendingValidationAction.value = undefined
@@ -324,6 +333,7 @@ async function cancelActiveDraft(): Promise<void> {
   await reloadPagesAfterMutation()
 }
 
+/** Converts a page into the select-option shape used by create and move dialogs. */
 function pageToOption(page: ConfluencePage): PageOption {
   return {
     title: buildPagePath(page, pages.value),
@@ -331,10 +341,12 @@ function pageToOption(page: ConfluencePage): PageOption {
   }
 }
 
+/** Converts the synthetic root select value back to the API's null parent id. */
 function normalizeParentSelection(value: string): string | null {
   return value === ROOT_PARENT_VALUE ? null : value
 }
 
+/** Returns a page's parent id only when the parent exists in the loaded tree. */
 function normalizedParentId(page: ConfluencePage): string | null {
   const parentId = page.parent_confluence_id ?? null
   return parentId && pages.value.some((candidate) => candidate.confluence_id === parentId)
@@ -342,6 +354,7 @@ function normalizedParentId(page: ConfluencePage): string | null {
     : null
 }
 
+/** Sorts pages by Confluence order first, then title for stable select ordering. */
 function comparePages(left: ConfluencePage, right: ConfluencePage): number {
   if (left.sort_order !== right.sort_order) {
     return left.sort_order - right.sort_order
@@ -349,6 +362,7 @@ function comparePages(left: ConfluencePage, right: ConfluencePage): number {
   return left.title.localeCompare(right.title)
 }
 
+/** Returns move-eligible siblings for a destination parent. */
 function siblingsForParent(parentId: string | null, page: ConfluencePage): ConfluencePage[] {
   return pages.value
     .filter((candidate) => {
@@ -359,6 +373,7 @@ function siblingsForParent(parentId: string | null, page: ConfluencePage): Confl
     .sort(comparePages)
 }
 
+/** Finds the previous sibling so the move dialog can preserve current ordering. */
 function previousSibling(page: ConfluencePage): ConfluencePage | undefined {
   const siblings = pages.value
     .filter((candidate) => normalizedParentId(candidate) === normalizedParentId(page))
@@ -367,6 +382,7 @@ function previousSibling(page: ConfluencePage): ConfluencePage | undefined {
   return pageIndex > 0 ? siblings[pageIndex - 1] : undefined
 }
 
+/** Converts structured parent/order selection into the closest Confluence move API call. */
 async function queueMove(
   page: ConfluencePage,
   selection: ParentMoveSelection,
@@ -400,12 +416,14 @@ async function queueMove(
   return undefined
 }
 
+/** Builds human-readable copy for the move confirmation dialog. */
 function describeMoveIntent(intent: PageMoveIntent): string {
   if (!intent.target) return `to the root of "${spaceRootLabel.value}"`
   if (intent.position === 'append') return `under "${intent.target.title}"`
   return `${intent.position} "${intent.target.title}"`
 }
 
+/** Checks whether a page is below another page in the loaded hierarchy. */
 function isDescendant(page: ConfluencePage, ancestor: ConfluencePage): boolean {
   let parentId = page.parent_confluence_id
   const seen = new Set<string>()
@@ -423,18 +441,17 @@ onMounted(loadPages)
 
 <template>
   <VContainer fluid class="pa-4">
-    <div class="pages-toolbar">
-      <div>
-        <h1>Pages</h1>
-        <p class="muted-text">Browse synced Confluence pages and manage app-side drafts.</p>
-      </div>
-      <div class="toolbar-actions">
+    <PageHeader
+      title="Pages"
+      description="Browse synced Confluence pages and manage app-side drafts."
+    >
+      <template #actions>
         <VBtn variant="tonal" prepend-icon="mdi-file-plus-outline" @click="openCreateDialog()">
           New empty page
         </VBtn>
         <VBtn color="primary" prepend-icon="mdi-sync" @click="runSync">Sync space</VBtn>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <JobStateDialog
       :job-id="activePageJob?.id"
@@ -566,27 +583,6 @@ onMounted(loadPages)
 </template>
 
 <style scoped>
-.pages-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.toolbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-h1 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 32px;
-}
-
 .dialog-card {
   padding-top: 4px;
 }
@@ -618,15 +614,4 @@ h1 {
   min-height: 0;
 }
 
-@media (max-width: 760px) {
-  .pages-toolbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .toolbar-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
 </style>

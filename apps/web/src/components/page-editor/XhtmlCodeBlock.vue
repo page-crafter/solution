@@ -6,16 +6,19 @@ const props = defineProps<{
   label?: string
 }>()
 
+/** Serializes XML element attributes into a stable one-line string. */
 function attributeText(element: Element): string {
   return Array.from(element.attributes)
     .map((attribute) => `${attribute.name}="${attribute.value}"`)
     .join(' ')
 }
 
+/** Formats invalid XML with a minimal tag-boundary fallback. */
 function fallbackFormat(source: string): string {
   return source.trim().replace(/></g, '>\n<')
 }
 
+/** Pretty-prints one parsed XML node with indentation. */
 function serializeNode(node: ChildNode, depth: number): string {
   const indent = '  '.repeat(depth)
   if (node.nodeType === Node.TEXT_NODE) {
@@ -46,6 +49,7 @@ function serializeNode(node: ChildNode, depth: number): string {
   return `${indent}${openTag}\n${children}\n${indent}</${tagName}>`
 }
 
+/** Formats Confluence Storage XHTML for read-only display in the editor. */
 function formatStorageXhtml(source: string): string {
   const trimmed = source.trim()
   if (!trimmed) return ''

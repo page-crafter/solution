@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import type { TaskExecution } from '../../types/api'
+import { formatAbsoluteDateTime, formatDurationRange, formatRelativeTime, getTimestamp } from '../../utils/dateTime'
+import { formatTaskName, isActiveJobStatus } from '../../utils/jobStatus'
+import JobStatusChip from '../common/JobStatusChip.vue'
 
 const props = defineProps<{
   executions: TaskExecution[]
@@ -8,6 +11,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  cancel: [jobId: string]
   openTimeline: [jobId: string]
   select: [jobId: string]
 }>()
@@ -27,16 +31,26 @@ const page = shallowRef(1)
 const itemsPerPage = shallowRef(10)
 const itemsPerPageOptions = [10, 25, 50]
 const expandedJobId = shallowRef<string | null>(null)
+const statusFilter = shallowRef<string>('all')
+const nowTick = shallowRef(Date.now())
 
-const statusMeta: Record<string, { color: string; icon: string }> = {
-  queued: { color: 'grey', icon: 'mdi-clock-outline' },
-  running: { color: 'info', icon: 'mdi-progress-clock' },
-  completed: { color: 'success', icon: 'mdi-check-circle-outline' },
-  failed: { color: 'error', icon: 'mdi-alert-circle-outline' },
-  cancelled: { color: 'warning', icon: 'mdi-cancel' },
-}
+let tickTimer: ReturnType<typeof setInterval> | null = null
 
-const groupedExecutions = computed<TaskExecutionGroup[]>(() => {
+const filterOptions = computed(() => {
+  const counts: Record<string, number> = { all: allGroups.value.length }
+  for (const group of allGroups.value) {
+    counts[group.status] = (counts[group.status] ?? 0) + 1
+  }
+  return [
+    { key: 'all', label: 'All', count: counts.all ?? 0 },
+    { key: 'running', label: 'Running', count: counts.running ?? 0 },
+    { key: 'queued', label: 'Queued', count: counts.queued ?? 0 },
+    { key: 'completed', label: 'Completed', count: counts.completed ?? 0 },
+    { key: 'failed', label: 'Failed', count: counts.failed ?? 0 },
+  ].filter((opt) => opt.key === 'all' || opt.count > 0)
+})
+
+const allGroups = computed<TaskExecutionGroup[]>(() => {
   const grouped = new Map<string, TaskExecution[]>()
 
   for (const execution of props.executions) {
@@ -67,6 +81,11 @@ const groupedExecutions = computed<TaskExecutionGroup[]>(() => {
     .sort((a, b) => b.lastActivityMs - a.lastActivityMs)
 })
 
+const groupedExecutions = computed<TaskExecutionGroup[]>(() => {
+  if (statusFilter.value === 'all') return allGroups.value
+  return allGroups.value.filter((g) => g.status === statusFilter.value)
+})
+
 const totalPages = computed(() => Math.max(1, Math.ceil(groupedExecutions.value.length / itemsPerPage.value)))
 
 const paginatedGroups = computed(() => {
@@ -95,16 +114,21 @@ watch(() => props.executions, () => {
   page.value = 1
 })
 
-function formatTaskName(taskName: string): string {
-  return taskName.replace('cm_worker.', '').replaceAll('_', ' ')
-}
+watch(statusFilter, () => {
+  page.value = 1
+})
 
-function getTimestamp(value?: string | null): number {
-  if (!value) return 0
-  const timestamp = new Date(value).getTime()
-  return Number.isNaN(timestamp) ? 0 : timestamp
-}
+onMounted(() => {
+  tickTimer = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 30000)
+})
 
+onUnmounted(() => {
+  if (tickTimer !== null) clearInterval(tickTimer)
+})
+
+/** Finds the most recently updated task execution inside a grouped job. */
 function findLatestExecution(executions: TaskExecution[]): TaskExecution | undefined {
   return executions.reduce<TaskExecution | undefined>((latest, execution) => {
     if (!latest) return execution
@@ -114,6 +138,7 @@ function findLatestExecution(executions: TaskExecution[]): TaskExecution | undef
   }, undefined)
 }
 
+/** Finds the earliest start timestamp in a grouped job. */
 function findEarliestStart(executions: TaskExecution[]): string | null {
   return executions.reduce<string | null>((earliest, execution) => {
     const current = execution.started_at ?? execution.created_at
@@ -122,6 +147,7 @@ function findEarliestStart(executions: TaskExecution[]): string | null {
   }, null)
 }
 
+/** Collapses task-level statuses into the single status shown for a job group. */
 function aggregateStatus(executions: TaskExecution[]): string {
   if (executions.some((execution) => execution.status === 'running')) return 'running'
   if (executions.some((execution) => execution.status === 'queued')) return 'queued'
@@ -131,29 +157,17 @@ function aggregateStatus(executions: TaskExecution[]): string {
   return findLatestExecution(executions)?.status ?? 'unknown'
 }
 
-function statusColor(status: string): string {
-  return statusMeta[status]?.color ?? 'grey'
+/** Formats a task timestamp relative to the component's ticking clock. */
+function formatRelative(value?: string | null): string {
+  return formatRelativeTime(value, nowTick.value)
 }
 
-function statusIcon(status: string): string {
-  return statusMeta[status]?.icon ?? 'mdi-help-circle-outline'
+/** Formats a task timestamp for tooltip display. */
+function formatAbsolute(value?: string | null): string {
+  return formatAbsoluteDateTime(value)
 }
 
-function formatDate(value?: string | null): string {
-  if (!value) return '-'
-  return new Date(value).toLocaleString()
-}
-
-function formatDurationRange(start?: string | null, end?: string | null): string {
-  if (!start || !end) return '-'
-  const durationMs = Math.max(0, new Date(end).getTime() - new Date(start).getTime())
-  if (durationMs < 1000) return '< 1s'
-  const seconds = Math.round(durationMs / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  return `${minutes}m ${seconds % 60}s`
-}
-
+/** Formats the duration of one task execution row. */
 function formatExecutionDuration(execution: TaskExecution): string {
   return formatDurationRange(
     execution.started_at ?? execution.created_at,
@@ -161,45 +175,76 @@ function formatExecutionDuration(execution: TaskExecution): string {
   )
 }
 
+/** Formats the duration between the first and latest task in a grouped job. */
 function formatGroupDuration(group: TaskExecutionGroup): string {
   return formatDurationRange(group.startedAt, group.lastActivityAt)
 }
 
+/** Formats the grouped task count with a singular/plural label. */
 function formatTaskCount(count: number): string {
   return `${count} task${count === 1 ? '' : 's'}`
 }
 
+/** Returns whether the provided group is currently expanded in the table. */
 function isGroupExpanded(group: TaskExecutionGroup): boolean {
   return expandedJobId.value === group.jobId
 }
 
+/** Toggles a job group and emits selection for parent-level context. */
 function toggleGroup(group: TaskExecutionGroup): void {
   emit('select', group.jobId)
   expandedJobId.value = expandedJobId.value === group.jobId ? null : group.jobId
 }
 
+/** Emits selection for a nested task execution row. */
 function selectExecution(execution: TaskExecution): void {
   emit('select', execution.job_id)
 }
 
+/** Selects a grouped job and requests its timeline dialog. */
 function openGroupTimeline(group: TaskExecutionGroup): void {
   emit('select', group.jobId)
   emit('openTimeline', group.jobId)
+}
+
+/** Returns whether a status is cancellable active work. */
+function isActive(status: string): boolean {
+  return isActiveJobStatus(status)
 }
 </script>
 
 <template>
   <div class="history-table">
+    <div v-if="filterOptions.length > 1" class="filter-bar">
+      <VChip
+        v-for="opt in filterOptions"
+        :key="opt.key"
+        :color="statusFilter === opt.key ? 'primary' : undefined"
+        :variant="statusFilter === opt.key ? 'tonal' : 'outlined'"
+        class="filter-chip"
+        size="small"
+        @click="statusFilter = opt.key"
+      >
+        {{ opt.label }}
+        <VBadge
+          v-if="opt.key !== 'all'"
+          :content="opt.count"
+          class="filter-badge"
+          inline
+        />
+      </VChip>
+    </div>
+
     <VTable v-if="paginatedGroups.length" class="job-table" density="comfortable" hover>
       <thead>
         <tr>
           <th class="expand-cell"></th>
           <th>Status</th>
           <th>Job</th>
-          <th>Tasks</th>
-          <th>Started</th>
-          <th>Duration</th>
-          <th>Message</th>
+          <th class="col-tasks">Tasks</th>
+          <th class="col-started">Started</th>
+          <th class="col-duration">Duration</th>
+          <th class="col-message">Message</th>
           <th class="action-cell"></th>
         </tr>
       </thead>
@@ -209,6 +254,7 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
             class="job-row"
             :class="{
               expanded: isGroupExpanded(group),
+              running: group.status === 'running',
               selected: group.jobId === selectedJobId,
             }"
             @click="toggleGroup(group)"
@@ -224,34 +270,58 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
               />
             </td>
             <td>
-              <VChip
-                :color="statusColor(group.status)"
-                :prepend-icon="statusIcon(group.status)"
-                size="small"
-                variant="tonal"
-              >
-                {{ group.status }}
-              </VChip>
+              <JobStatusChip :status="group.status" />
             </td>
             <td class="job-cell">
               <span class="mono job-id">{{ group.jobId }}</span>
             </td>
-            <td>
+            <td class="col-tasks">
               <VChip size="x-small" variant="tonal">{{ formatTaskCount(group.taskCount) }}</VChip>
             </td>
-            <td>{{ formatDate(group.startedAt) }}</td>
-            <td>{{ formatGroupDuration(group) }}</td>
-            <td class="message-cell">{{ group.message ?? '-' }}</td>
-            <td class="action-cell">
-              <VBtn
-                class="timeline-button"
-                prepend-icon="mdi-timeline-clock-outline"
-                size="small"
-                variant="tonal"
-                @click.stop="openGroupTimeline(group)"
+            <td class="col-started">
+              <VTooltip :text="formatAbsolute(group.startedAt)" location="top">
+                <template #activator="{ props: tooltipProps }">
+                  <span v-bind="tooltipProps">{{ formatRelative(group.startedAt) }}</span>
+                </template>
+              </VTooltip>
+            </td>
+            <td class="col-duration">{{ formatGroupDuration(group) }}</td>
+            <td class="col-message message-cell">
+              <VTooltip
+                v-if="group.message"
+                :text="group.message"
+                location="top"
+                max-width="400"
               >
-                Timeline
-              </VBtn>
+                <template #activator="{ props: tooltipProps }">
+                  <span v-bind="tooltipProps">{{ group.message }}</span>
+                </template>
+              </VTooltip>
+              <span v-else>-</span>
+            </td>
+            <td class="action-cell">
+              <div class="action-buttons">
+                <VBtn
+                  v-if="isActive(group.status)"
+                  class="cancel-button"
+                  icon="mdi-stop-circle-outline"
+                  size="small"
+                  title="Cancel job"
+                  variant="text"
+                  color="error"
+                  @click.stop="emit('cancel', group.jobId)"
+                />
+                <VBtn
+                  class="timeline-button"
+                  prepend-icon="mdi-timeline-clock-outline"
+                  size="small"
+                  variant="tonal"
+                  title="Timeline"
+                  @click.stop="openGroupTimeline(group)"
+                >
+                  <span class="btn-label">Timeline</span>
+                </VBtn>
+              </div>
             </td>
           </tr>
           <tr v-if="isGroupExpanded(group)" class="tasks-row">
@@ -261,10 +331,10 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
                   <tr>
                     <th>Status</th>
                     <th>Task</th>
-                    <th>Actor</th>
-                    <th>Started</th>
-                    <th>Duration</th>
-                    <th>Message</th>
+                    <th class="col-actor">Actor</th>
+                    <th class="col-started">Started</th>
+                    <th class="col-duration">Duration</th>
+                    <th class="col-message">Message</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -274,20 +344,34 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
                     @click="selectExecution(execution)"
                   >
                     <td>
-                      <VChip
-                        :color="statusColor(execution.status)"
-                        :prepend-icon="statusIcon(execution.status)"
-                        size="small"
-                        variant="tonal"
-                      >
-                        {{ execution.status }}
-                      </VChip>
+                      <JobStatusChip :status="execution.status" />
                     </td>
                     <td class="task-cell">{{ formatTaskName(execution.task_name) }}</td>
-                    <td>{{ execution.actor }}</td>
-                    <td>{{ formatDate(execution.started_at ?? execution.created_at) }}</td>
-                    <td>{{ formatExecutionDuration(execution) }}</td>
-                    <td class="message-cell">{{ execution.message ?? '-' }}</td>
+                    <td class="col-actor">{{ execution.actor }}</td>
+                    <td class="col-started">
+                      <VTooltip
+                        :text="formatAbsolute(execution.started_at ?? execution.created_at)"
+                        location="top"
+                      >
+                        <template #activator="{ props: tooltipProps }">
+                          <span v-bind="tooltipProps">{{ formatRelative(execution.started_at ?? execution.created_at) }}</span>
+                        </template>
+                      </VTooltip>
+                    </td>
+                    <td class="col-duration">{{ formatExecutionDuration(execution) }}</td>
+                    <td class="col-message message-cell">
+                      <VTooltip
+                        v-if="execution.message"
+                        :text="execution.message"
+                        location="top"
+                        max-width="400"
+                      >
+                        <template #activator="{ props: tooltipProps }">
+                          <span v-bind="tooltipProps">{{ execution.message }}</span>
+                        </template>
+                      </VTooltip>
+                      <span v-else>-</span>
+                    </td>
                   </tr>
                 </tbody>
               </VTable>
@@ -328,8 +412,23 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
   overflow-x: auto;
 }
 
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+
+.filter-chip {
+  cursor: pointer;
+}
+
+.filter-badge {
+  margin-left: 4px;
+}
+
 .job-table {
-  min-width: 1080px;
+  width: 100%;
 }
 
 .history-table :deep(th) {
@@ -354,6 +453,16 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
   background: #f7f9fc;
 }
 
+.job-row.running {
+  border-left: 3px solid transparent;
+  animation: running-pulse 2s ease-in-out infinite;
+}
+
+@keyframes running-pulse {
+  0%, 100% { border-left-color: #0c66e4; }
+  50% { border-left-color: transparent; }
+}
+
 .expand-cell {
   width: 44px;
 }
@@ -370,8 +479,15 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
 }
 
 .action-cell {
-  width: 132px;
+  width: 160px;
   text-align: end;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
 }
 
 .tasks-row {
@@ -387,7 +503,7 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
 }
 
 .nested-task-table :deep(table) {
-  min-width: 840px;
+  width: 100%;
 }
 
 .task-cell {
@@ -423,9 +539,48 @@ function openGroupTimeline(group: TaskExecutionGroup): void {
   max-width: 96px;
 }
 
-@media (max-width: 960px) {
-  .job-table {
-    min-width: 980px;
+/* < 1280px: hide message column */
+@media (max-width: 1279px) {
+  .col-message {
+    display: none;
+  }
+}
+
+/* < 960px: hide tasks + actor, icon-only timeline button */
+@media (max-width: 959px) {
+  .col-tasks,
+  .col-actor {
+    display: none;
+  }
+
+  .btn-label {
+    display: none;
+  }
+
+  .job-cell {
+    max-width: 200px;
+  }
+}
+
+/* < 720px: hide duration */
+@media (max-width: 719px) {
+  .col-duration {
+    display: none;
+  }
+}
+
+/* < 600px: hide started, items-per-page */
+@media (max-width: 599px) {
+  .col-started {
+    display: none;
+  }
+
+  .items-per-page {
+    display: none;
+  }
+
+  .job-cell {
+    max-width: 120px;
   }
 }
 </style>

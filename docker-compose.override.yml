@@ -1,0 +1,161 @@
+services:
+  webservice:
+    image: page-crafter:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://confluence:confluence@postgres:5432/page_crafter
+      REDIS_URL: redis://redis:6379/0
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      CONFLUENCE_BASE_URL: http://confluence:8090
+      LIGHTRAG_BASE_URL: http://lightrag:9621
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      lightrag:
+        condition: service_started
+
+  worker:
+    image: page-crafter:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "cm_worker.celery_app", "worker", "--loglevel=info"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://confluence:confluence@postgres:5432/page_crafter
+      REDIS_URL: redis://redis:6379/0
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      CONFLUENCE_BASE_URL: http://confluence:8090
+      LIGHTRAG_BASE_URL: http://lightrag:9621
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      lightrag:
+        condition: service_started
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: page_crafter
+      POSTGRES_USER: confluence
+      POSTGRES_PASSWORD: confluence
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confluence -d page_crafter"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  lightrag:
+    image: ghcr.io/hkuds/lightrag:latest
+    environment:
+      HOST: 0.0.0.0
+      PORT: "9621"
+      WORKING_DIR: /tmp/lightrag/rag_storage
+      INPUT_DIR: /tmp/lightrag/inputs
+      LIGHTRAG_API_KEY: ${LIGHTRAG_API_KEY:-}
+      LIGHTRAG_KV_STORAGE: JsonKVStorage
+      LIGHTRAG_DOC_STATUS_STORAGE: JsonDocStatusStorage
+      LIGHTRAG_GRAPH_STORAGE: NetworkXStorage
+      LIGHTRAG_VECTOR_STORAGE: NanoVectorDBStorage
+      LLM_BINDING: ${LIGHTRAG_LLM_BINDING:-openai}
+      LLM_BINDING_HOST: ${LIGHTRAG_LLM_BINDING_HOST:-${OPENAI_BASE_URL:-https://api.openai.com/v1}}
+      LLM_BINDING_API_KEY: ${LIGHTRAG_LLM_BINDING_API_KEY-${OPENAI_API_KEY:-}}
+      LLM_MODEL: ${LIGHTRAG_LLM_MODEL:-${OPENAI_MODEL:-gpt-5.2}}
+      EMBEDDING_BINDING: ${LIGHTRAG_EMBEDDING_BINDING:-openai}
+      EMBEDDING_BINDING_HOST: ${LIGHTRAG_EMBEDDING_BINDING_HOST:-${OPENAI_BASE_URL:-https://api.openai.com/v1}}
+      EMBEDDING_BINDING_API_KEY: ${LIGHTRAG_EMBEDDING_BINDING_API_KEY-${OPENAI_API_KEY:-}}
+      EMBEDDING_MODEL: ${LIGHTRAG_EMBEDDING_MODEL:-${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}}
+      EMBEDDING_DIM: ${LIGHTRAG_EMBEDDING_DIM:-1536}
+      EMBEDDING_TOKEN_LIMIT: ${LIGHTRAG_EMBEDDING_TOKEN_LIMIT:-8192}
+      SUMMARY_LANGUAGE: English
+    ports:
+      - "9621:9621"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2.5
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+      
+  confluence-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: confluence
+      POSTGRES_USER: confluence
+      POSTGRES_PASSWORD: confluence
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - confluence-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confluence -d confluence"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  confluence:
+    image: ${CONFLUENCE_IMAGE:-atlassian/confluence:latest}
+    environment:
+      ATL_JDBC_URL: jdbc:postgresql://confluence-db:5432/confluence
+      ATL_JDBC_USER: confluence
+      ATL_JDBC_PASSWORD: confluence
+      ATL_DB_TYPE: postgresql
+      ATL_TOMCAT_SCHEME: http
+      ATL_PROXY_NAME: localhost
+      ATL_PROXY_PORT: "8090"
+      JVM_MINIMUM_MEMORY: 1024m
+      JVM_MAXIMUM_MEMORY: 2048m
+      JAVA_OPTS: '-javaagent:/atlassian-agent.jar'
+    ports:
+      - "8090:8090"
+      - "8091:8091"
+    volumes:
+      - confluence-home:/var/atlassian/application-data/confluence
+      - ./docker/confluence/atlassian-agent.jar:/atlassian-agent.jar:ro
+    depends_on:
+      confluence-db:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  confluence-db-data:
+  confluence-home:

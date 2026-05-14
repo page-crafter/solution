@@ -25,6 +25,7 @@ const hasChatContent = computed(
     || streamingError.value.length > 0,
 )
 
+/** Lazily creates a chat session and loads any persisted messages for the widget. */
 async function initializeChat(): Promise<void> {
   if (session.value) return
   session.value = await createChatSession()
@@ -32,6 +33,7 @@ async function initializeChat(): Promise<void> {
   messages.value = loaded
 }
 
+/** Clears widget state and starts a fresh chat session. */
 async function clearChat(): Promise<void> {
   chatGeneration.value += 1
   messages.value = []
@@ -41,6 +43,7 @@ async function clearChat(): Promise<void> {
   session.value = await createChatSession()
 }
 
+/** Streams one widget question while ignoring stale responses after resets. */
 async function askQuestion(): Promise<void> {
   if (!session.value || streaming.value) return
   const message = draftMessage.value.trim()
@@ -57,6 +60,7 @@ async function askQuestion(): Promise<void> {
   streamingContent.value = ''
   streamingError.value = ''
 
+  /** Returns whether streamed callbacks still belong to the active widget session. */
   const isCurrentChat = () =>
     chatGeneration.value === requestGeneration && session.value?.id === sessionId
 
@@ -93,6 +97,7 @@ async function askQuestion(): Promise<void> {
   }
 }
 
+/** Opens or closes the floating chat widget panel. */
 function toggleOpen(): void {
   open.value = !open.value
 }

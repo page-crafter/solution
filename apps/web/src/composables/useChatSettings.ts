@@ -16,6 +16,7 @@ export const defaultChatSettings: ChatQuerySettings = {
   only_need_prompt: false,
 }
 
+/** Loads persisted chat settings from localStorage and ignores unknown keys. */
 function loadStoredSettings(): Partial<ChatQuerySettings> {
   const rawValue = window.localStorage.getItem(STORAGE_KEY)
   if (!rawValue) return {}
@@ -31,16 +32,19 @@ function loadStoredSettings(): Partial<ChatQuerySettings> {
   }
 }
 
+/** Persists the current chat settings snapshot into localStorage. */
 function persistSettings(settings: ChatQuerySettings): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
 }
 
+/** Provides reactive chat query settings with reset and persistence helpers. */
 export function useChatSettings() {
   const settings = reactive<ChatQuerySettings>({
     ...defaultChatSettings,
     ...loadStoredSettings(),
   })
 
+  /** Updates one chat setting and enforces mutually exclusive context/prompt flags. */
   function updateSetting<Key extends keyof ChatQuerySettings>(
     key: Key,
     value: ChatQuerySettings[Key],
@@ -54,16 +58,19 @@ export function useChatSettings() {
     }
   }
 
+  /** Resets one chat setting back to the shared default value. */
   function resetSetting(key: keyof ChatQuerySettings): void {
     updateSetting(key, defaultChatSettings[key] as never)
   }
 
+  /** Resets every chat setting back to the shared defaults. */
   function resetAll(): void {
     for (const key of Object.keys(defaultChatSettings) as Array<keyof ChatQuerySettings>) {
       updateSetting(key, defaultChatSettings[key] as never)
     }
   }
 
+  /** Returns a plain object snapshot safe to send with an API request. */
   function snapshot(): ChatQuerySettings {
     return { ...settings }
   }

@@ -1,5 +1,6 @@
 import type { ConfluencePage } from '../types/api'
 
+/** Builds a breadcrumb-like page path from a page and the loaded page tree. */
 export function buildPagePath(page: ConfluencePage, allPages: ConfluencePage[]): string {
   const titles = [page.title]
   let parentId = page.parent_confluence_id

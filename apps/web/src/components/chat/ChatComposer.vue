@@ -16,11 +16,13 @@ const emit = defineEmits<{
 const canSubmit = computed(() => !props.disabled && message.value.trim().length > 0)
 const canClearChat = computed(() => !props.clearDisabled)
 
+/** Requests a parent-level chat reset without mutating the local draft input. */
 function clearChat(): void {
   if (!canClearChat.value) return
   emit('clearChat')
 }
 
+/** Emits submit when the draft has content and the parent has not disabled sending. */
 function submitMessage(): void {
   if (!canSubmit.value) return
   emit('submit')

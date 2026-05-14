@@ -1,29 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 import type { ChatMessage } from '../../types/api'
+import { citationTitle, renderMarkdown, toDisplayMessage } from '../../utils/chatMarkdown'
+import type { DisplayMessage } from '../../utils/chatMarkdown'
 import AppSpinner from '../common/AppSpinner.vue'
-
-interface Citation {
-  pageId?: number | null
-  confluenceId?: string | null
-  snippet?: string | null
-  filePath?: string | null
-  referenceId?: string | number | null
-  title?: string | null
-  webUrl?: string | null
-}
-
-interface DisplayCitation extends Citation {
-  href?: string
-  label: string
-}
-
-interface DisplayMessage extends ChatMessage {
-  citations: DisplayCitation[]
-  html: string
-}
-
-type CitationLookup = Map<string, DisplayCitation>
+import EmptyState from '../common/EmptyState.vue'
 
 const props = defineProps<{
   messages: ChatMessage[]
@@ -39,258 +20,18 @@ const autoScrollEnabled = shallowRef(true)
 const userScrollIntent = shallowRef(false)
 const copyResetTimers = new WeakMap<HTMLButtonElement, number>()
 
-function parseCitations(value: string): Citation[] {
-  try {
-    const parsed = JSON.parse(value) as unknown
-    return Array.isArray(parsed)
-      ? parsed.filter((citation): citation is Citation => (
-        typeof citation === 'object'
-        && citation !== null
-        && !Array.isArray(citation)
-      ))
-      : []
-  } catch {
-    return []
-  }
-}
-
-function citationLabel(citation: Citation, index: number): string {
-  if (citation.title) return citation.title
-  if (citation.confluenceId) return `Confluence ${citation.confluenceId}`
-  if (citation.filePath) return citation.filePath
-  if (citation.referenceId) return `Reference ${citation.referenceId}`
-  return `Reference ${index + 1}`
-}
-
-function citationTitle(citation: Citation): string | undefined {
-  return citation.snippet || citation.filePath || citation.webUrl || undefined
-}
-
+/** Maps a persisted chat role to the label shown above each message. */
 function messageRoleLabel(role: ChatMessage['role']): string {
   return role === 'user' ? 'You' : 'Documentation assistant'
 }
 
+/** Maps a persisted chat role to the avatar icon shown beside each message. */
 function messageAvatarIcon(role: ChatMessage['role']): string {
   return role === 'user' ? 'mdi-account-outline' : 'mdi-robot-outline'
 }
 
-function safeHttpHref(value?: string | null): string | undefined {
-  if (!value) return undefined
-  try {
-    const url = new URL(value, window.location.origin)
-    return ['http:', 'https:'].includes(url.protocol) ? url.href : undefined
-  } catch {
-    return undefined
-  }
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
-}
-
-function renderPlainInline(value: string): string {
-  let html = escapeHtml(value)
-  html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-  html = html.replace(/__([^_\n]+)__/g, '<strong>$1</strong>')
-  html = html.replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>')
-  html = html.replace(/(^|[\s(])_([^_\n]+)_/g, '$1<em>$2</em>')
-  return html
-}
-
-function renderLink(label: string, hrefValue: string): string {
-  const href = safeHttpHref(hrefValue)
-  if (!href) return renderPlainInline(label)
-  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${renderPlainInline(label)}</a>`
-}
-
-function confluenceReferenceKey(value: string): string | undefined {
-  const parts = value.split(':')
-  return parts.length >= 3 ? parts.at(-1) : undefined
-}
-
-function renderConfluenceReference(value: string, citationLookup: CitationLookup): string {
-  const citation = citationLookup.get(value) ?? citationLookup.get(confluenceReferenceKey(value) ?? '')
-  if (!citation?.href) return renderPlainInline(value)
-  return renderLink(citation.label, citation.href)
-}
-
-function renderInlineMarkdown(value: string, citationLookup: CitationLookup): string {
-  const tokens = /(`[^`]+`|\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s<]+|confluence:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+)/g
-  let html = ''
-  let cursor = 0
-
-  for (const match of value.matchAll(tokens)) {
-    const token = match[0]
-    const index = match.index ?? 0
-    html += renderPlainInline(value.slice(cursor, index))
-
-    if (token.startsWith('`')) {
-      html += `<code>${escapeHtml(token.slice(1, -1))}</code>`
-    } else if (token.startsWith('[')) {
-      const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token)
-      html += linkMatch ? renderLink(linkMatch[1], linkMatch[2]) : renderPlainInline(token)
-    } else if (token.startsWith('confluence:')) {
-      html += renderConfluenceReference(token, citationLookup)
-    } else {
-      html += renderLink(token, token)
-    }
-
-    cursor = index + token.length
-  }
-
-  html += renderPlainInline(value.slice(cursor))
-  return html
-}
-
-function renderParagraph(lines: string[], citationLookup: CitationLookup): string {
-  return `<p>${renderInlineMarkdown(lines.join('\n'), citationLookup).replaceAll('\n', '<br>')}</p>`
-}
-
-function renderList(items: string[], ordered: boolean, citationLookup: CitationLookup): string {
-  const tag = ordered ? 'ol' : 'ul'
-  const listItems = items.map((item) => `<li>${renderInlineMarkdown(item, citationLookup)}</li>`).join('')
-  return `<${tag}>${listItems}</${tag}>`
-}
-
-function renderBlockquote(lines: string[], citationLookup: CitationLookup): string {
-  return `<blockquote>${renderParagraph(lines, citationLookup)}</blockquote>`
-}
-
-function renderCodeBlock(lines: string[]): string {
-  const code = lines.join('\n')
-  const encodedCode = escapeHtml(encodeURIComponent(code))
-  return [
-    '<div class="code-block">',
-    `<button type="button" class="code-copy-button" data-code="${encodedCode}" title="Copy code" aria-label="Copy code">Copy</button>`,
-    `<pre><code>${escapeHtml(code)}</code></pre>`,
-    '</div>',
-  ].join('')
-}
-
-function renderMarkdown(content: string, citationLookup: CitationLookup = new Map()): string {
-  const blocks: string[] = []
-  const paragraph: string[] = []
-  const listItems: string[] = []
-  const quoteLines: string[] = []
-  let listOrdered = false
-  let codeLines: string[] | undefined
-
-  function flushParagraph(): void {
-    if (!paragraph.length) return
-    blocks.push(renderParagraph(paragraph, citationLookup))
-    paragraph.length = 0
-  }
-
-  function flushList(): void {
-    if (!listItems.length) return
-    blocks.push(renderList(listItems, listOrdered, citationLookup))
-    listItems.length = 0
-  }
-
-  function flushQuote(): void {
-    if (!quoteLines.length) return
-    blocks.push(renderBlockquote(quoteLines, citationLookup))
-    quoteLines.length = 0
-  }
-
-  function flushOpenBlocks(): void {
-    flushParagraph()
-    flushList()
-    flushQuote()
-  }
-
-  for (const line of content.replaceAll('\r\n', '\n').split('\n')) {
-    if (line.startsWith('```')) {
-      if (codeLines) {
-        blocks.push(renderCodeBlock(codeLines))
-        codeLines = undefined
-      } else {
-        flushOpenBlocks()
-        codeLines = []
-      }
-      continue
-    }
-
-    if (codeLines) {
-      codeLines.push(line)
-      continue
-    }
-
-    if (!line.trim()) {
-      flushOpenBlocks()
-      continue
-    }
-
-    const headingMatch = /^(#{1,6})\s+(.+)$/.exec(line)
-    if (headingMatch) {
-      flushOpenBlocks()
-      const level = headingMatch[1].length
-      blocks.push(`<h${level}>${renderInlineMarkdown(headingMatch[2], citationLookup)}</h${level}>`)
-      continue
-    }
-
-    const orderedMatch = /^\s*\d+\.\s+(.+)$/.exec(line)
-    const unorderedMatch = /^\s*[-*+]\s+(.+)$/.exec(line)
-    if (orderedMatch || unorderedMatch) {
-      flushParagraph()
-      flushQuote()
-      const nextOrdered = Boolean(orderedMatch)
-      if (listItems.length && listOrdered !== nextOrdered) flushList()
-      listOrdered = nextOrdered
-      listItems.push((orderedMatch ?? unorderedMatch)?.[1] ?? '')
-      continue
-    }
-
-    const quoteMatch = /^>\s?(.*)$/.exec(line)
-    if (quoteMatch) {
-      flushParagraph()
-      flushList()
-      quoteLines.push(quoteMatch[1])
-      continue
-    }
-
-    flushList()
-    flushQuote()
-    paragraph.push(line)
-  }
-
-  if (codeLines) blocks.push(renderCodeBlock(codeLines))
-  flushOpenBlocks()
-  return blocks.join('\n')
-}
-
-function toDisplayCitation(citation: Citation, index: number): DisplayCitation {
-  return {
-    ...citation,
-    href: safeHttpHref(citation.webUrl),
-    label: citationLabel(citation, index),
-  }
-}
-
-function citationLookup(citations: DisplayCitation[]): CitationLookup {
-  const lookup: CitationLookup = new Map()
-  for (const citation of citations) {
-    if (!citation.href) continue
-    if (citation.confluenceId) lookup.set(String(citation.confluenceId), citation)
-    if (citation.filePath) lookup.set(citation.filePath, citation)
-  }
-  return lookup
-}
-
 const renderedMessages = computed<DisplayMessage[]>(() =>
-  props.messages.map((message) => {
-    const citations = parseCitations(message.citations_json).map(toDisplayCitation)
-    return {
-      ...message,
-      citations,
-      html: renderMarkdown(message.content, citationLookup(citations)),
-    }
-  }),
+  props.messages.map(toDisplayMessage),
 )
 
 const streamingHtml = computed(() => renderMarkdown(props.streamingContent ?? ''))
@@ -314,10 +55,12 @@ const showsPlaceholder = computed(
     && !props.streamingError,
 )
 
+/** Determines whether the message viewport is close enough to continue auto-scrolling. */
 function isNearBottom(element: HTMLElement): boolean {
   return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_SCROLL_THRESHOLD
 }
 
+/** Moves the message viewport to the latest content and re-enables auto-scroll. */
 function scrollToBottom(): void {
   const element = messagesScroller.value
   if (!element) return
@@ -330,10 +73,12 @@ function scrollToBottom(): void {
   userScrollIntent.value = false
 }
 
+/** Records that a pointer, wheel, or touch event came from user scroll intent. */
 function markUserScrollIntent(): void {
   userScrollIntent.value = true
 }
 
+/** Disables auto-scroll only after the user intentionally scrolls away from the bottom. */
 function handleScroll(): void {
   const element = messagesScroller.value
   if (!element) return
@@ -349,6 +94,7 @@ function handleScroll(): void {
   }
 }
 
+/** Copies text to the clipboard with a textarea fallback for older browsers. */
 function copyTextToClipboard(value: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     return navigator.clipboard.writeText(value)
@@ -366,6 +112,7 @@ function copyTextToClipboard(value: string): Promise<void> {
   return Promise.resolve()
 }
 
+/** Copies one rendered code block and temporarily updates its button state. */
 async function copyCodeBlock(button: HTMLButtonElement): Promise<void> {
   const encodedCode = button.dataset.code
   if (!encodedCode) return
@@ -391,6 +138,7 @@ async function copyCodeBlock(button: HTMLButtonElement): Promise<void> {
   copyResetTimers.set(button, timer)
 }
 
+/** Handles delegated clicks from rendered markdown code copy buttons. */
 function handleMessageClick(event: MouseEvent): void {
   if (!(event.target instanceof Element)) return
   const copyButton = event.target.closest<HTMLButtonElement>('.code-copy-button')
@@ -425,17 +173,13 @@ onMounted(async () => {
     @touchstart.passive="markUserScrollIntent"
     @wheel.passive="markUserScrollIntent"
   >
-    <div v-if="showsPlaceholder" class="placeholder">
-      <div class="placeholder-content">
-        <div class="placeholder-icon" aria-hidden="true">
-          <VIcon icon="mdi-message-text-outline" size="34" color="primary" />
-        </div>
-        <div class="placeholder-title">Ask a question to begin</div>
-        <div class="placeholder-copy">
-          Answers are streamed from synced Confluence content.
-        </div>
-      </div>
-    </div>
+    <EmptyState
+      v-if="showsPlaceholder"
+      icon="mdi-message-text-outline"
+      title="Ask a question to begin"
+      message="Answers are streamed from synced Confluence content."
+      min-height="360px"
+    />
 
     <div
       v-for="message in renderedMessages"
@@ -509,44 +253,6 @@ onMounted(async () => {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-}
-
-.placeholder {
-  display: grid;
-  flex: 1;
-  min-height: 360px;
-  place-items: center;
-  text-align: center;
-}
-
-.placeholder-content {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  max-width: 300px;
-}
-
-.placeholder-icon {
-  display: grid;
-  width: 72px;
-  height: 72px;
-  place-items: center;
-  border: 1px solid #cce0ff;
-  border-radius: 50%;
-  background: #e9f2ff;
-}
-
-.placeholder-title {
-  color: #172b4d;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 24px;
-}
-
-.placeholder-copy {
-  color: #626f86;
-  font-size: 14px;
-  line-height: 20px;
 }
 
 .message {

@@ -44,6 +44,9 @@ describe('runtime config', () => {
           clientId: 'docs-web',
         },
       },
+      chat: {
+        publicAccess: false,
+      },
     })
   })
 
@@ -52,7 +55,7 @@ describe('runtime config', () => {
 
     await loadRuntimeConfig()
 
-    expect(getRuntimeConfig().backend.baseUrl).toBe('http://localhost:8000')
+    expect(getRuntimeConfig().backend.baseUrl).toBe('')
     expect(getRuntimeConfig().auth.keycloak.url).toBe('http://localhost:8080')
   })
 })

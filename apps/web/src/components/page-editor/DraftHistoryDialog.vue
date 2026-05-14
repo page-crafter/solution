@@ -19,6 +19,7 @@ const emit = defineEmits<{
 
 const hasVersions = computed(() => props.versions.length > 0)
 
+/** Maps draft version source codes to labels shown in the history list. */
 function sourceLabel(source: string): string {
   if (source === 'baseline') return 'Baseline'
   if (source === 'manual') return 'Manual save'
@@ -27,6 +28,7 @@ function sourceLabel(source: string): string {
   return source
 }
 
+/** Formats a draft version timestamp while preserving invalid raw values. */
 function formatDate(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -36,6 +38,7 @@ function formatDate(value: string): string {
   }).format(date)
 }
 
+/** Builds a compact one-line excerpt for a stored Markdown draft. */
 function excerpt(markdown: string): string {
   const condensed = markdown.replace(/\s+/g, ' ').trim()
   return condensed.length > 180 ? `${condensed.slice(0, 180)}...` : condensed

@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import type { ConfluencePage } from '../../types/api'
 import { buildPagePath } from '../../composables/pagePath'
-import ChatWidget from '../common/ChatWidget.vue'
 
 const selectedPageId = defineModel<number | undefined>({ default: undefined })
 
@@ -23,6 +22,7 @@ const pageOptions = computed(() =>
 )
 const canSelect = computed(() => Boolean(selectedPageId.value && !props.loading))
 
+/** Emits the selected page id when the picker has a valid selection. */
 function submitSelection(): void {
   if (!selectedPageId.value || props.loading) return
   emit('select', selectedPageId.value)
@@ -94,8 +94,6 @@ function submitSelection(): void {
       </VBtn>
     </form>
     </VHover>
-
-    <ChatWidget />
   </section>
 </template>
 

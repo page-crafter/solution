@@ -1,17 +1,18 @@
 services:
-  api:
+  webservice:
+    image: page-crafter:local
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: Dockerfile
     env_file:
       - .env
+    command: ["uvicorn", "cm_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "apps/api/src"]
     environment:
       DATABASE_URL: postgresql+psycopg://confluence:confluence@postgres:5432/page_crafter
       REDIS_URL: redis://redis:6379/0
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       CONFLUENCE_BASE_URL: http://confluence:8090
       LIGHTRAG_BASE_URL: http://lightrag:9621
-      WEB_ORIGIN: http://localhost
     ports:
       - "8000:8000"
     read_only: true
@@ -29,30 +30,12 @@ services:
       lightrag:
         condition: service_started
 
-  front:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    ports:
-      - "80:8080"
-    volumes:
-      - ./apps/web/public/config.json:/usr/share/nginx/html/config.json:ro
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /var/cache/nginx
-    security_opt:
-      - no-new-privileges:true
-    depends_on:
-      api:
-        condition: service_started
-      keycloak:
-        condition: service_started
-
   worker:
+    image: page-crafter:local
     build:
       context: .
-      dockerfile: apps/worker/Dockerfile
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "cm_worker.celery_app", "worker", "--loglevel=info"]
     env_file:
       - .env
     environment:

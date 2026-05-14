@@ -1,6 +1,6 @@
 {
   "backend": {
-    "baseUrl": "http://localhost:8000"
+    "baseUrl": ""
   },
   "auth": {
     "keycloak": {
@@ -8,5 +8,8 @@
       "realm": "page-crafter",
       "clientId": "page-crafter-web"
     }
+  },
+  "chat": {
+    "publicAccess": false
   }
 }

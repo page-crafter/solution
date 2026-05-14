@@ -105,10 +105,12 @@ const activeSectionMeta = computed(() =>
     : { icon: 'mdi-chart-timeline-variant', label: 'Last prompt' },
 )
 
+/** Formats exact numeric metric values using the browser locale. */
 function formatNumber(value: number): string {
   return value.toLocaleString()
 }
 
+/** Formats large numeric metric values with compact unit suffixes. */
 function formatCompactNumber(value: number): string {
   const units = [
     { threshold: 1_000_000_000_000, suffix: 'T' },
@@ -124,6 +126,7 @@ function formatCompactNumber(value: number): string {
   return `${scaledValue.toLocaleString(undefined, { maximumFractionDigits })}${unit.suffix}`
 }
 
+/** Formats a millisecond duration for the chat stats tables. */
 function formatDuration(value: number): string {
   if (value <= 0) return '0 ms'
   if (value < 1000) return `${Math.round(value)} ms`
@@ -134,6 +137,7 @@ function formatDuration(value: number): string {
   return `${minutes}m ${remainder}s`
 }
 
+/** Formats optional server timing values while pending stats are still unavailable. */
 function formatOptionalDuration(value?: number): string {
   return value === undefined ? 'Pending' : formatDuration(value)
 }

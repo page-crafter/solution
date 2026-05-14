@@ -150,6 +150,7 @@ const publishTooltip = computed(() => {
   return ''
 })
 
+/** Clears run and proposal polling timers when page context changes or unmounts. */
 function clearEditorTimers(): void {
   if (runTimer) window.clearInterval(runTimer)
   if (proposalTimer) window.clearInterval(proposalTimer)
@@ -158,6 +159,7 @@ function clearEditorTimers(): void {
   proposalPollingStartedAt = undefined
 }
 
+/** Resets page-specific editor, draft, proposal, and chat state. */
 function resetEditorState(): void {
   clearEditorTimers()
   selectedPageDetail.value = undefined
@@ -172,17 +174,20 @@ function resetEditorState(): void {
   appendedRunMessages.clear()
 }
 
+/** Reads and validates the pageId query parameter against the loaded page list. */
 function routePageId(): number | undefined {
   const queryPageId = Number(route.query.pageId)
   if (!Number.isFinite(queryPageId) || queryPageId <= 0) return undefined
   return pages.value.some((page) => page.id === queryPageId) ? queryPageId : undefined
 }
 
+/** Navigates the editor to a selected page id. */
 function selectPageForEditing(pageId?: number | null): void {
   if (!pageId) return
   void router.push({ path: '/editor', query: { pageId: String(pageId) } })
 }
 
+/** Returns whether an older draft run needs preview rendering queued. */
 function needsDraftRender(pageEditRun?: PageEditRun | null): pageEditRun is PageEditRun {
   return Boolean(
     pageEditRun?.markdown_draft
@@ -192,6 +197,7 @@ function needsDraftRender(pageEditRun?: PageEditRun | null): pageEditRun is Page
 }
 
 
+/** Appends a local editor-chat message without mutating the existing array. */
 function appendChatMessage(role: EditChatMessage['role'], content: string): void {
   chatMessages.value = [
     ...chatMessages.value,
@@ -203,6 +209,7 @@ function appendChatMessage(role: EditChatMessage['role'], content: string): void
   ]
 }
 
+/** Adds a one-time assistant message when a proposal reaches a visible state. */
 function appendProposalMessage(nextProposal: PageProposal): void {
   const key = `${nextProposal.id}:${nextProposal.status}`
   if (appendedProposalMessages.has(key)) return
@@ -216,6 +223,7 @@ function appendProposalMessage(nextProposal: PageProposal): void {
   }
 }
 
+/** Adds a one-time assistant message when a run reaches an important state. */
 function appendRunMessage(nextRun: PageEditRun): void {
   const key = `${nextRun.id}:${nextRun.status}:${nextRun.preview_status}`
   if (appendedRunMessages.has(key)) return
@@ -233,6 +241,7 @@ function appendRunMessage(nextRun: PageEditRun): void {
   }
 }
 
+/** Extracts an API detail message from thrown errors, falling back to user-safe copy. */
 function errorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof Error) || !error.message) return fallback
   try {
@@ -244,10 +253,12 @@ function errorMessage(error: unknown, fallback: string): string {
   return error.message
 }
 
+/** Appends an API failure message into the editor chat stream. */
 function appendErrorMessage(error: unknown, fallback: string): void {
   appendChatMessage('assistant', errorMessage(error, fallback))
 }
 
+/** Marks the current proposal failed locally when polling times out or refresh fails. */
 function failCurrentProposal(message: string): void {
   if (!proposal.value) {
     appendChatMessage('assistant', message)
@@ -261,6 +272,7 @@ function failCurrentProposal(message: string): void {
   }
 }
 
+/** Builds the base markdown context used for the next proposal request. */
 function currentProposalBase(): CreateProposalOptions {
   const baseMarkdown = draft.value.trim()
     ? draft.value
@@ -499,6 +511,7 @@ async function restoreCurrentDraftVersion(versionId: number): Promise<void> {
   }
 }
 
+/** Resets the selected page's app-side draft and clears local draft/proposal state. */
 async function resetCurrentDraft(): Promise<void> {
   if (!selectedPageId.value) return
   resettingDraft.value = true
@@ -514,6 +527,7 @@ async function resetCurrentDraft(): Promise<void> {
   }
 }
 
+/** Opens the publish confirmation only when the current draft is publishable. */
 function openPublishDialog(): void {
   if (!canPublish.value) return
   publishDialogOpen.value = true

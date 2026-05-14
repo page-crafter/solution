@@ -28,6 +28,7 @@ let ctx: CanvasRenderingContext2D | null = null
 let ro: ResizeObserver | null = null
 let spawnTimer = 0
 
+/** Rebuilds the particle field for the current canvas dimensions and density. */
 function spawnParticles(w: number, h: number): void {
   const count = Math.floor((w * h) / props.density)
   particles = Array.from({ length: count }, () => ({
@@ -38,6 +39,7 @@ function spawnParticles(w: number, h: number): void {
   }))
 }
 
+/** Advances and paints the particle field for one animation frame. */
 function draw(): void {
   const canvas = canvasRef.value
   if (!canvas || !ctx) return

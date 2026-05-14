@@ -3,6 +3,8 @@ import { useAuthStore } from '../stores/auth'
 import ChatHomeView from '../views/ChatHomeView.vue'
 import ChatView from '../views/ChatView.vue'
 import DashboardView from '../views/DashboardView.vue'
+import EmbedChatView from '../views/EmbedChatView.vue'
+import IntegrationView from '../views/IntegrationView.vue'
 import LoginView from '../views/LoginView.vue'
 import PagesView from '../views/PagesView.vue'
 import PageEditorView from '../views/PageEditorView.vue'
@@ -18,6 +20,8 @@ export const router = createRouter({
     { path: '/editor', component: PageEditorView, meta: { layout: 'editor', requiresAuth: true, requiresAdmin: true } },
     { path: '/chat', component: ChatView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
     { path: '/runs', component: RunsView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
+    { path: '/integration', component: IntegrationView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
+    { path: '/embed/chat', component: EmbedChatView, meta: { layout: 'embed' } },
   ],
 })
 

@@ -10,6 +10,7 @@ from jwt import PyJWKClient
 from cm_api.auth.user import CurrentUser
 
 bearer = HTTPBearer(auto_error=True)
+optional_bearer = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 
@@ -57,3 +58,33 @@ def _require_admin(user: CurrentUser = Depends(get_current_user)) -> CurrentUser
 
 
 require_admin = Depends(_require_admin)
+
+
+def get_chat_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(optional_bearer)],
+) -> CurrentUser | None:
+    """Return the authenticated user for chat endpoints.
+
+    When chat_public_access is enabled the token is optional; any request is
+    accepted. When it is disabled a valid bearer token is required.
+    """
+    settings = get_settings()
+    if credentials is None:
+        if settings.chat_public_access:
+            return None
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        claims = decode_token(credentials.credentials)
+    except jwt.InvalidTokenError as exc:
+        logger.warning("JWT validation failed: %s", exc)
+        raise HTTPException(status_code=401, detail="Invalid authentication token") from exc
+    except Exception as exc:
+        logger.error("Unexpected auth error: %s", exc, exc_info=True)
+        raise HTTPException(status_code=401, detail="Invalid authentication token") from exc
+    roles = frozenset(claims.get("roles", []))
+    return CurrentUser(
+        subject=str(claims.get("sub", "")),
+        email=str(claims.get("email", "")),
+        display_name=str(claims.get("name") or claims.get("preferred_username") or "User"),
+        roles=roles,
+    )

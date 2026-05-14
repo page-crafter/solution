@@ -44,11 +44,13 @@ const scrollContentKey = computed(() => {
   ].join(':')
 })
 
+/** Emits a prompt submission when the chat panel is not disabled or busy. */
 function submitMessage(): void {
   if (!canSubmit.value) return
   emit('submit')
 }
 
+/** Scrolls the editor chat transcript to its newest message. */
 function scrollToBottom(): void {
   const element = messagesScroller.value
   if (!element) return

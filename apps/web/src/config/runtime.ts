@@ -9,11 +9,14 @@ export interface RuntimeConfig {
       clientId: string
     }
   }
+  chat: {
+    publicAccess: boolean
+  }
 }
 
 const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   backend: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000',
+    baseUrl: import.meta.env.VITE_API_BASE_URL ?? '',
   },
   auth: {
     keycloak: {
@@ -22,16 +25,21 @@ const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
       clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'page-crafter-web',
     },
   },
+  chat: {
+    publicAccess: false,
+  },
 }
 
 let runtimeConfig: RuntimeConfig = DEFAULT_RUNTIME_CONFIG
 
+/** Returns a plain object view when a config section is object-like. */
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {}
 }
 
+/** Reads a string config value with fallback and optional empty-string support. */
 function readString(value: unknown, fallback: string, allowEmpty = false): string {
   if (typeof value !== 'string') {
     return fallback
@@ -42,15 +50,19 @@ function readString(value: unknown, fallback: string, allowEmpty = false): strin
   return value
 }
 
+/** Removes trailing slashes from API base URLs for predictable request joining. */
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '')
 }
 
+/** Normalizes raw config JSON into the typed runtime config shape. */
 function normalizeRuntimeConfig(raw: unknown): RuntimeConfig {
   const root = asRecord(raw)
   const backend = asRecord(root.backend)
   const auth = asRecord(root.auth)
   const keycloak = asRecord(auth.keycloak)
+
+  const chat = asRecord(root.chat)
 
   return {
     backend: {
@@ -67,9 +79,13 @@ function normalizeRuntimeConfig(raw: unknown): RuntimeConfig {
         clientId: readString(keycloak.clientId, DEFAULT_RUNTIME_CONFIG.auth.keycloak.clientId),
       },
     },
+    chat: {
+      publicAccess: chat.publicAccess === true,
+    },
   }
 }
 
+/** Builds the public config URL relative to Vite's configured base path. */
 function configUrl(): string {
   return `${import.meta.env.BASE_URL}config.json`
 }
@@ -96,6 +112,7 @@ export function getRuntimeConfig(): RuntimeConfig {
   return runtimeConfig
 }
 
+/** Restores default runtime config between unit tests. */
 export function resetRuntimeConfigForTests(): void {
   runtimeConfig = DEFAULT_RUNTIME_CONFIG
 }

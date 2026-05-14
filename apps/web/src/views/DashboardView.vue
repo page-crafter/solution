@@ -5,8 +5,13 @@ import { fetchSpaces } from '../api/spaces'
 import { fetchLightRagStatus } from '../api/lightrag'
 import { fetchTaskHistory } from '../api/jobs'
 import AppSpinner from '../components/common/AppSpinner.vue'
+import JobStatusChip from '../components/common/JobStatusChip.vue'
+import PageHeader from '../components/common/PageHeader.vue'
+import SectionCard from '../components/common/SectionCard.vue'
 import KpiCard from '../components/dashboard/KpiCard.vue'
 import type { KpiCard as KpiCardType, SpaceStat, LightRagStatus, TaskExecution } from '../types/api'
+import { formatRelativeTime } from '../utils/dateTime'
+import { formatTaskName } from '../utils/jobStatus'
 
 const loading = shallowRef(true)
 const cards = shallowRef<KpiCardType[]>([])
@@ -16,6 +21,7 @@ const recentJobs = shallowRef<TaskExecution[]>([])
 
 const activeSpace = computed<SpaceStat | null>(() => spaces.value[0] ?? null)
 
+/** Loads dashboard cards, space metrics, LightRAG status, and recent jobs in parallel. */
 async function loadDashboard(): Promise<void> {
   loading.value = true
   const [kpis, spaceData, lrStatus, jobs] = await Promise.allSettled([
@@ -31,37 +37,11 @@ async function loadDashboard(): Promise<void> {
   loading.value = false
 }
 
+/** Chooses the progress color used for indexing coverage percentages. */
 function coverageColor(pct: number): string {
   if (pct >= 90) return 'success'
   if (pct >= 60) return 'warning'
   return 'error'
-}
-
-function jobStatusIcon(status: string): string {
-  if (status === 'success' || status === 'finished') return 'mdi-check-circle'
-  if (status === 'failed') return 'mdi-alert-circle'
-  if (status === 'running') return 'mdi-progress-clock'
-  return 'mdi-clock-outline'
-}
-
-function jobStatusColor(status: string): string {
-  if (status === 'success' || status === 'finished') return 'success'
-  if (status === 'failed') return 'error'
-  if (status === 'running') return 'warning'
-  return 'grey'
-}
-
-function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
-}
-
-function friendlyTaskName(name: string): string {
-  return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 onMounted(loadDashboard)
@@ -69,11 +49,11 @@ onMounted(loadDashboard)
 
 <template>
   <VContainer fluid class="pa-6">
-    <div class="page-heading">
-      <div>
-        <h1>Documentation dashboard</h1>
-        <p class="muted-text">Track sync, indexing, draft, and publishing readiness.</p>
-      </div>
+    <PageHeader
+      title="Documentation dashboard"
+      description="Track sync, indexing, draft, and publishing readiness."
+    >
+      <template #actions>
       <VBtn
         variant="tonal"
         prepend-icon="mdi-refresh"
@@ -83,7 +63,8 @@ onMounted(loadDashboard)
       >
         Refresh
       </VBtn>
-    </div>
+      </template>
+    </PageHeader>
 
     <AppSpinner v-if="loading" label="Loading documentation metrics" />
 
@@ -171,7 +152,7 @@ onMounted(loadDashboard)
             </div>
             <div class="space-stat">
               <span class="muted-text text-caption">Last sync</span>
-              <span class="stat-val">{{ timeAgo(activeSpace.last_synced_at) }}</span>
+              <span class="stat-val">{{ formatRelativeTime(activeSpace.last_synced_at) }}</span>
             </div>
           </div>
         </div>
@@ -187,12 +168,7 @@ onMounted(loadDashboard)
       <!-- Recent jobs -->
       <VRow>
         <VCol cols="12">
-          <VCard class="surface-border" variant="flat">
-            <VCardTitle class="section-title">
-              <VIcon icon="mdi-history" size="18" class="mr-2" />
-              Recent jobs
-            </VCardTitle>
-            <VDivider />
+          <SectionCard title="Recent jobs" icon="mdi-history" :padded="false">
             <VList density="compact" class="py-0">
               <VListItem
                 v-for="job in recentJobs"
@@ -200,27 +176,23 @@ onMounted(loadDashboard)
                 class="job-item"
               >
                 <template #prepend>
-                  <VIcon
-                    :icon="jobStatusIcon(job.status)"
-                    :color="jobStatusColor(job.status)"
-                    size="18"
-                  />
+                  <JobStatusChip :status="job.status" size="x-small" />
                 </template>
                 <VListItemTitle class="text-body-2">
-                  {{ friendlyTaskName(job.task_name) }}
+                  {{ formatTaskName(job.task_name) }}
                 </VListItemTitle>
                 <VListItemSubtitle class="text-caption">
                   {{ job.message || job.status }}
                 </VListItemSubtitle>
                 <template #append>
-                  <span class="text-caption muted-text">{{ timeAgo(job.created_at) }}</span>
+                  <span class="text-caption muted-text">{{ formatRelativeTime(job.created_at) }}</span>
                 </template>
               </VListItem>
               <VListItem v-if="recentJobs.length === 0">
                 <VListItemTitle class="text-caption muted-text">No jobs yet</VListItemTitle>
               </VListItem>
             </VList>
-          </VCard>
+          </SectionCard>
         </VCol>
       </VRow>
     </template>
@@ -228,19 +200,6 @@ onMounted(loadDashboard)
 </template>
 
 <style scoped>
-.page-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-h1 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 32px;
-}
-
 .status-bar {
   border-radius: 8px;
 }
@@ -260,14 +219,6 @@ h1 {
 .status-sep {
   color: var(--v-theme-on-surface);
   opacity: 0.3;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 600;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
 }
 
 /* Space header */

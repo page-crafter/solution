@@ -2,6 +2,7 @@
 import { computed, reactive, shallowRef, watch } from 'vue'
 import type { PageMovePosition } from '../../api/pages'
 import type { ConfluencePage } from '../../types/api'
+import EmptyState from '../common/EmptyState.vue'
 import StatusChip from '../common/StatusChip.vue'
 
 interface PageTreeNode {
@@ -100,6 +101,7 @@ const visibleNodes = computed(() => {
   const nodes: PageTreeNode[] = []
   const matched = matchingConfluenceIds.value
 
+  /** Appends one visible page and any expanded descendants to the flattened tree. */
   function appendNode(
     page: ConfluencePage,
     depth: number,
@@ -143,15 +145,18 @@ const displayedNodes = computed(() => {
   return rootExpanded.value ? visibleNodes.value : []
 })
 
+/** Normalizes root and page labels for synthetic root comparisons. */
 function normalizeTreeLabel(label: string): string {
   return label.trim().toLowerCase()
 }
 
+/** Returns a parent id only when the parent exists in the loaded page collection. */
 function normalizedParentId(page: ConfluencePage): string | null {
   const parentId = page.parent_confluence_id ?? null
   return parentId && pageByConfluenceId.value.has(parentId) ? parentId : null
 }
 
+/** Sorts pages by Confluence order first, then title for stable display. */
 function comparePages(left: ConfluencePage, right: ConfluencePage): number {
   if (left.sort_order !== right.sort_order) {
     return left.sort_order - right.sort_order
@@ -159,6 +164,7 @@ function comparePages(left: ConfluencePage, right: ConfluencePage): number {
   return left.title.localeCompare(right.title)
 }
 
+/** Expands or collapses one tree node. */
 function toggleNode(page: ConfluencePage): void {
   if (expandedIds.has(page.id)) {
     expandedIds.delete(page.id)
@@ -167,6 +173,7 @@ function toggleNode(page: ConfluencePage): void {
   expandedIds.add(page.id)
 }
 
+/** Checks whether moving a page would place it under one of its descendants. */
 function isDescendant(page: ConfluencePage, ancestor: ConfluencePage): boolean {
   let parentId = page.parent_confluence_id ?? null
   while (parentId) {
@@ -176,6 +183,7 @@ function isDescendant(page: ConfluencePage, ancestor: ConfluencePage): boolean {
   return false
 }
 
+/** Initializes drag state and marks the browser drag payload as a move. */
 function startDrag(event: DragEvent, page: ConfluencePage): void {
   draggedPageId.value = page.id
   event.dataTransfer?.setData('text/plain', String(page.id))
@@ -184,11 +192,13 @@ function startDrag(event: DragEvent, page: ConfluencePage): void {
   }
 }
 
+/** Returns whether the current dragged page can be dropped on the target page. */
 function canDropOn(page: ConfluencePage): boolean {
   const draggedPage = draggedPageId.value ? pageById.value.get(draggedPageId.value) : undefined
   return Boolean(draggedPage && draggedPage.id !== page.id && !isDescendant(page, draggedPage))
 }
 
+/** Resolves before, append, or after intent based on vertical pointer position. */
 function resolveDropPosition(event: DragEvent): PageMovePosition {
   const row = event.currentTarget as HTMLElement | null
   if (!row) return 'append'
@@ -199,6 +209,7 @@ function resolveDropPosition(event: DragEvent): PageMovePosition {
   return 'append'
 }
 
+/** Expands a hovered parent after a short delay during append drag-over. */
 function scheduleExpand(node: PageTreeNode, position: PageMovePosition): void {
   if (expandTimer) window.clearTimeout(expandTimer)
   if (position !== 'append' || !node.hasChildren || expandedIds.has(node.page.id)) return
@@ -207,6 +218,7 @@ function scheduleExpand(node: PageTreeNode, position: PageMovePosition): void {
   }, 550)
 }
 
+/** Records the current page drop target while rejecting illegal descendant moves. */
 function markDropTarget(event: DragEvent, node: PageTreeNode): void {
   if (!canDropOn(node.page)) {
     dropIntent.value = undefined
@@ -217,6 +229,7 @@ function markDropTarget(event: DragEvent, node: PageTreeNode): void {
   scheduleExpand(node, position)
 }
 
+/** Marks the synthetic root as the current drop target. */
 function markRootDropTarget(): void {
   if (!draggedPageId.value) {
     dropIntent.value = undefined
@@ -225,6 +238,7 @@ function markRootDropTarget(): void {
   dropIntent.value = { kind: 'root' }
 }
 
+/** Clears the drop target when the pointer leaves the active row. */
 function clearDropIfLeaving(event: DragEvent): void {
   const row = event.currentTarget as HTMLElement | null
   const relatedTarget = event.relatedTarget as Node | null
@@ -232,6 +246,7 @@ function clearDropIfLeaving(event: DragEvent): void {
   dropIntent.value = undefined
 }
 
+/** Clears drag state and any pending auto-expand timer. */
 function clearDrag(): void {
   if (expandTimer) window.clearTimeout(expandTimer)
   expandTimer = undefined
@@ -239,6 +254,7 @@ function clearDrag(): void {
   dropIntent.value = undefined
 }
 
+/** Emits a validated page reorder intent for drops onto page rows. */
 function dropOn(node: PageTreeNode): void {
   const draggedPage = draggedPageId.value ? pageById.value.get(draggedPageId.value) : undefined
   if (!draggedPage || !canDropOn(node.page)) {
@@ -256,6 +272,7 @@ function dropOn(node: PageTreeNode): void {
   clearDrag()
 }
 
+/** Emits a root-level reorder intent for drops onto the synthetic root row. */
 function dropOnRoot(): void {
   const draggedPage = draggedPageId.value ? pageById.value.get(draggedPageId.value) : undefined
   if (!draggedPage) {
@@ -267,6 +284,7 @@ function dropOnRoot(): void {
   clearDrag()
 }
 
+/** Returns whether a row should display the given drop-position indicator. */
 function isDropPosition(node: PageTreeNode, position: PageMovePosition): boolean {
   return (
     dropIntent.value?.kind === 'page'
@@ -275,10 +293,12 @@ function isDropPosition(node: PageTreeNode, position: PageMovePosition): boolean
   )
 }
 
+/** Returns whether the synthetic root row should show an active drop state. */
 function isRootDropTarget(): boolean {
   return dropIntent.value?.kind === 'root'
 }
 
+/** Returns whether a real root page should visually stand in for the space root. */
 function isMergedRootPage(page: ConfluencePage): boolean {
   return (
     !showsSyntheticRoot.value
@@ -287,39 +307,47 @@ function isMergedRootPage(page: ConfluencePage): boolean {
   )
 }
 
+/** Resolves the icon for a flattened tree node. */
 function nodeIcon(node: PageTreeNode): string {
   if (isMergedRootPage(node.page)) return 'mdi-folder-home-outline'
   return node.hasChildren ? 'mdi-file-tree-outline' : 'mdi-file-document-outline'
 }
 
+/** Resolves the icon color for a flattened tree node. */
 function nodeIconColor(node: PageTreeNode): string {
   return isMergedRootPage(node.page) ? 'primary' : 'secondary'
 }
 
+/** Emits a reorder intent to move the current node before its previous sibling. */
 function moveBefore(node: PageTreeNode): void {
   if (!node.previousSibling) return
   emit('reorder', { page: node.page, target: node.previousSibling, position: 'before' })
 }
 
+/** Emits a reorder intent to move the current node after its next sibling. */
 function moveAfter(node: PageTreeNode): void {
   if (!node.nextSibling) return
   emit('reorder', { page: node.page, target: node.nextSibling, position: 'after' })
 }
 
+/** Returns whether the node should show an expanded children region. */
 function hasVisibleChildren(node: PageTreeNode): boolean {
   return node.hasChildren && expandedIds.has(node.page.id)
 }
 
+/** Computes the left offset for sibling continuation guide lines. */
 function siblingLineLeft(depth: number): number {
   return Math.max(0, depth - 1) * 34 + 22
 }
 
+/** Builds inline style for one vertical continuation guide. */
 function continuationStyle(depth: number): { left: string } {
   return {
     left: `${siblingLineLeft(depth)}px`,
   }
 }
 
+/** Builds the indentation grid style for one tree row. */
 function rowStyle(depth: number): {
   paddingLeft: string
   '--tree-branch-left': string
@@ -390,15 +418,21 @@ watch(
         </div>
       </div>
 
-      <div v-if="showsSyntheticRoot && rootExpanded && pages.length === 0" class="empty-state">
-        <VIcon icon="mdi-file-tree-outline" size="36" color="secondary" />
-        <div class="text-body-2 muted-text">No synced pages.</div>
-      </div>
+      <EmptyState
+        v-if="showsSyntheticRoot && rootExpanded && pages.length === 0"
+        icon="mdi-file-tree-outline"
+        title="No synced pages"
+        message="No synced pages."
+        min-height="360px"
+      />
 
-      <div v-if="filterActive && displayedNodes.length === 0 && pages.length > 0" class="empty-state">
-        <VIcon icon="mdi-file-search-outline" size="36" color="secondary" />
-        <div class="text-body-2 muted-text">No pages match "{{ filterQuery }}"</div>
-      </div>
+      <EmptyState
+        v-if="filterActive && displayedNodes.length === 0 && pages.length > 0"
+        icon="mdi-file-search-outline"
+        title="No matching pages"
+        :message="`No pages match ${filterQuery}`"
+        min-height="360px"
+      />
 
       <div
         v-for="node in displayedNodes"
@@ -742,15 +776,6 @@ watch(
 .tree-row:hover .tree-actions,
 .tree-row--active .tree-actions {
   opacity: 1;
-}
-
-.empty-state {
-  display: grid;
-  gap: 12px;
-  min-height: 360px;
-  place-items: center;
-  align-content: center;
-  text-align: center;
 }
 
 @media (max-width: 760px) {

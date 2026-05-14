@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import ChatWidget from '../components/common/ChatWidget.vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -32,6 +33,8 @@ const router = useRouter()
   <VMain>
     <slot />
   </VMain>
+
+  <ChatWidget />
 </template>
 
 <style scoped>

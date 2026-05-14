@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { ConfluencePage, PageDetail, PageEditRun } from '../../types/api'
+import EmptyState from '../common/EmptyState.vue'
 import StatusChip from '../common/StatusChip.vue'
 
 const props = defineProps<{
@@ -22,6 +23,7 @@ const parentTitle = computed(() => {
   return parent?.title ?? props.page.parent_confluence_id
 })
 
+/** Navigates the selected page into the full editor route. */
 function openInEditor(): void {
   void router.push({ path: '/editor', query: { pageId: String(props.page!.id) } })
 }
@@ -100,17 +102,13 @@ function openInEditor(): void {
       <pre class="source-preview">{{ page.extracted_text || 'No indexed text yet.' }}</pre>
     </template>
 
-    <div v-else class="placeholder">
-      <div class="placeholder-content">
-        <div class="placeholder-icon" aria-hidden="true">
-          <VIcon icon="mdi-file-tree-outline" size="34" color="primary" />
-        </div>
-        <div class="placeholder-title">Pick a page to begin</div>
-        <div class="placeholder-copy">
-          Select one from the tree to review its source, drafts, and update status.
-        </div>
-      </div>
-    </div>
+    <EmptyState
+      v-else
+      icon="mdi-file-tree-outline"
+      title="Pick a page to begin"
+      message="Select one from the tree to review its source, drafts, and update status."
+      min-height="360px"
+    />
   </VCard>
 </template>
 
@@ -170,40 +168,4 @@ h2 {
   white-space: pre-wrap;
 }
 
-.placeholder {
-  display: grid;
-  min-height: 360px;
-  place-items: center;
-  text-align: center;
-}
-
-.placeholder-content {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  max-width: 300px;
-}
-
-.placeholder-icon {
-  display: grid;
-  width: 72px;
-  height: 72px;
-  place-items: center;
-  border: 1px solid #cce0ff;
-  border-radius: 50%;
-  background: #e9f2ff;
-}
-
-.placeholder-title {
-  color: #172b4d;
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 24px;
-}
-
-.placeholder-copy {
-  color: #626f86;
-  font-size: 14px;
-  line-height: 20px;
-}
 </style>

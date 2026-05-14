@@ -19,7 +19,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from cm_api.auth.dependencies import get_current_user
+from cm_api.auth.dependencies import get_chat_user
 from cm_api.auth.user import CurrentUser
 from cm_api.services.lightrag import stream_lightrag_query
 
@@ -370,7 +370,7 @@ async def chat_stream_events(
 def create_chat_session(
     request: CreateChatSessionRequest,
     session: Session = Depends(get_session),
-    _user=Depends(get_current_user),
+    _user=Depends(get_chat_user),
 ) -> ChatSessionRead:
     """Create a documentation chat session."""
     chat_session = ChatSession(title=request.title)
@@ -384,7 +384,7 @@ def create_chat_session(
 def list_messages(
     session_id: str,
     session: Session = Depends(get_session),
-    _user=Depends(get_current_user),
+    _user=Depends(get_chat_user),
 ) -> list[ChatMessageRead]:
     """Return all messages for a chat session."""
     messages = session.scalars(
@@ -400,7 +400,7 @@ def stream_question(
     session_id: str,
     request: ChatStreamRequest,
     session: Session = Depends(get_session),
-    _user: CurrentUser = Depends(get_current_user),
+    _user: CurrentUser | None = Depends(get_chat_user),
 ) -> StreamingResponse:
     """Persist a question and stream a LightRAG-grounded answer."""
     message_text = request.message.strip()

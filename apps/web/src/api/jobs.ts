@@ -15,3 +15,8 @@ export function fetchJobEvents(jobId: string): Promise<JobEvent[]> {
 export function fetchTaskHistory(limit = 50): Promise<TaskExecution[]> {
   return apiRequest<TaskExecution[]>(`/api/jobs/history?limit=${limit}`)
 }
+
+/** Cancels a job by id. */
+export function cancelJob(jobId: string): Promise<JobRead> {
+  return apiRequest<JobRead>(`/api/jobs/${jobId}/cancel`, { method: 'POST' })
+}

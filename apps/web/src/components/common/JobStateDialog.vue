@@ -2,8 +2,8 @@
 import { computed, onUnmounted, shallowRef, watch } from 'vue'
 import { fetchJob } from '../../api/jobs'
 import type { JobRead } from '../../types/api'
-
-const FINISHED_STATUSES = new Set(['completed', 'failed', 'canceled', 'cancelled', 'published', 'blocked'])
+import { isErrorJobStatus, isFinishedJobStatus, jobStatusColor, jobStatusIcon } from '../../utils/jobStatus'
+import JobStatusChip from './JobStatusChip.vue'
 
 const props = withDefaults(defineProps<{
   jobId?: string
@@ -29,60 +29,58 @@ const finishedJobId = shallowRef<string>()
 let pollTimer: number | undefined
 let closeTimer: number | undefined
 
-const isFinished = computed(() => Boolean(job.value && FINISHED_STATUSES.has(job.value.status)))
+const isFinished = computed(() => isFinishedJobStatus(job.value?.status))
 const statusText = computed(() => job.value?.status ?? 'queued')
 const messageText = computed(() => job.value?.message || job.value?.id || props.pendingLabel)
-const statusColor = computed(() => {
-  if (job.value?.status === 'failed' || job.value?.status === 'blocked') return 'error'
-  if (isFinished.value) return 'success'
-  return 'primary'
-})
-const statusIcon = computed(() => {
-  if (job.value?.status === 'failed' || job.value?.status === 'blocked') return 'mdi-alert-circle-outline'
-  if (isFinished.value) return 'mdi-check-circle-outline'
-  return 'mdi-progress-clock'
-})
+const statusColor = computed(() => jobStatusColor(statusText.value))
+const statusIcon = computed(() => jobStatusIcon(statusText.value))
 
+/** Stops job polling when the dialog closes or reaches a terminal state. */
 function stopPolling(): void {
   if (!pollTimer) return
   window.clearInterval(pollTimer)
   pollTimer = undefined
 }
 
+/** Clears a pending auto-close timer before scheduling a new one. */
 function clearCloseTimer(): void {
   if (!closeTimer) return
   window.clearTimeout(closeTimer)
   closeTimer = undefined
 }
 
+/** Hides the status dialog and notifies the parent that it was closed. */
 function closeDialog(): void {
   visible.value = false
   emit('closed')
 }
 
+/** Schedules automatic dialog close for successful jobs when enabled. */
 function scheduleClose(): void {
   clearCloseTimer()
   closeTimer = window.setTimeout(closeDialog, props.autoCloseDelayMs)
 }
 
+/** Loads the current job state, emits completion once, and manages polling closeout. */
 async function loadJob(): Promise<void> {
   if (!props.jobId) return
   const currentJobId = props.jobId
   const nextJob = await fetchJob(currentJobId)
   if (props.jobId !== currentJobId) return
   job.value = nextJob
-  if (!FINISHED_STATUSES.has(nextJob.status)) return
+  if (!isFinishedJobStatus(nextJob.status)) return
   stopPolling()
   if (finishedJobId.value !== nextJob.id) {
     finishedJobId.value = nextJob.id
     emit('finished', nextJob)
   }
-  const isError = nextJob.status === 'failed' || nextJob.status === 'blocked'
+  const isError = isErrorJobStatus(nextJob.status)
   if (props.autoClose && !isError) {
     scheduleClose()
   }
 }
 
+/** Starts interval polling for the active job id. */
 function startPolling(): void {
   stopPolling()
   pollTimer = window.setInterval(loadJob, 1500)
@@ -124,13 +122,11 @@ onUnmounted(() => {
 
         <div class="job-state-copy">
           <h2>{{ title }}</h2>
-          <VChip :color="statusColor" size="small" variant="tonal">
-            {{ statusText }}
-          </VChip>
+          <JobStatusChip :status="statusText" />
           <p class="muted-text">{{ messageText }}</p>
         </div>
         <VBtn
-          v-if="isFinished && (job?.status === 'failed' || job?.status === 'blocked')"
+          v-if="isFinished && isErrorJobStatus(job?.status)"
           variant="tonal"
           color="error"
           @click="closeDialog"

@@ -68,6 +68,7 @@ async function loadMessages(): Promise<void> {
   }
 }
 
+/** Adds the submitted user prompt immediately while the backend persists it. */
 function appendOptimisticUserMessage(content: string): void {
   if (!session.value) return
   messages.value = [
@@ -82,6 +83,7 @@ function appendOptimisticUserMessage(content: string): void {
   ]
 }
 
+/** Persists one advanced chat setting change through the settings composable. */
 function handleUpdateSetting<Key extends keyof ChatQuerySettings>(
   key: Key,
   value: ChatQuerySettings[Key],
@@ -89,10 +91,12 @@ function handleUpdateSetting<Key extends keyof ChatQuerySettings>(
   updateSetting(key, value)
 }
 
+/** Opens the stats sidebar panel or collapses it when it is already active. */
 function toggleStatsPanel(): void {
   activeSidebarPanel.value = activeSidebarPanel.value === 'stats' ? null : 'stats'
 }
 
+/** Opens the settings sidebar panel or collapses it when it is already active. */
 function toggleSettingsPanel(): void {
   activeSidebarPanel.value = activeSidebarPanel.value === 'settings' ? null : 'settings'
 }
@@ -114,6 +118,7 @@ async function askQuestion(): Promise<void> {
 
   let assistantMessage: ChatMessage | undefined
   let loadedPersistedMessages = false
+  /** Returns whether streamed callbacks still belong to the active chat session. */
   const isCurrentChat = () =>
     chatGeneration.value === requestGeneration && session.value?.id === sessionId
 
@@ -171,6 +176,7 @@ async function askQuestion(): Promise<void> {
   }
 }
 
+/** Resets the current chat UI and starts a fresh session while preserving settings. */
 async function clearChat(): Promise<void> {
   chatGeneration.value += 1
   messages.value = []
