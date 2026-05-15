@@ -1,6 +1,9 @@
+import hashlib
+import re
 import subprocess
 import sys
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -55,11 +58,53 @@ def normalize_storage_for_preview(storage_xhtml: str) -> str:
     return str(soup)
 
 
-def convert_markdown_to_storage(markdown: str) -> str:
+def marker_token(marker: str) -> str:
+    """Return a plain-text token that md2conf will pass through unchanged."""
+    digest = hashlib.sha256(marker.encode("utf-8")).hexdigest()[:12]
+    return f"CM_PRESERVED_STORAGE_{digest}"
+
+
+def protect_preserved_storage_markers(
+    markdown: str,
+    preserved_storage_map: Mapping[str, str] | None = None,
+) -> tuple[str, dict[str, str]]:
+    """Replace known preservation markers with temporary md2conf-safe tokens."""
+    if not preserved_storage_map:
+        return markdown, {}
+
+    protected = markdown
+    token_map: dict[str, str] = {}
+    for marker, storage in preserved_storage_map.items():
+        if marker not in protected:
+            continue
+        token = marker_token(marker)
+        protected = protected.replace(marker, token)
+        token_map[token] = storage
+    return protected, token_map
+
+
+def restore_preserved_storage_tokens(storage_xhtml: str, token_map: Mapping[str, str]) -> str:
+    """Replace temporary tokens in generated Storage XHTML with original fragments."""
+    restored = storage_xhtml
+    for token, storage in token_map.items():
+        token_pattern = re.escape(token)
+        restored = re.sub(rf"<p>\s*{token_pattern}\s*</p>", storage, restored)
+        restored = restored.replace(token, storage)
+    return restored
+
+
+def convert_markdown_to_storage(
+    markdown: str,
+    preserved_storage_map: Mapping[str, str] | None = None,
+) -> str:
     """Convert Markdown to Confluence Storage XHTML with markdown-to-confluence."""
+    protected_markdown, token_map = protect_preserved_storage_markers(
+        markdown,
+        preserved_storage_map,
+    )
     with tempfile.TemporaryDirectory() as tmp_dir:
         source = Path(tmp_dir) / "draft.md"
-        source.write_text(markdown, encoding="utf-8")
+        source.write_text(protected_markdown, encoding="utf-8")
         command = [
             sys.executable,
             "-m",
@@ -84,6 +129,7 @@ def convert_markdown_to_storage(markdown: str) -> str:
 
         output = source.with_suffix(".csf")
         if output.exists():
-            return normalize_storage_for_preview(output.read_text(encoding="utf-8"))
+            storage = normalize_storage_for_preview(output.read_text(encoding="utf-8"))
+            return restore_preserved_storage_tokens(storage, token_map)
         details = (completed.stderr or completed.stdout).strip()
         raise RuntimeError(f"markdown-to-confluence did not write Storage XHTML: {details}")

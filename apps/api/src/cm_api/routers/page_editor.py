@@ -155,7 +155,7 @@ def proposal_base(
     if active_run and active_run.markdown_draft:
         return active_run.id, active_run.markdown_draft, "draft"
 
-    return None, page.extracted_text, "page"
+    return None, page.source_markdown, "page"
 
 
 @router.post("/runs", response_model=PageEditRunRead)

@@ -55,6 +55,7 @@ const run = shallowRef<PageEditRun>()
 const proposal = shallowRef<PageProposal>()
 const draftVersions = shallowRef<DraftVersion[]>([])
 const draft = shallowRef('')
+const draftManuallyEdited = shallowRef(false)
 const chatDraft = shallowRef('')
 const chatMessages = shallowRef<EditChatMessage[]>([])
 const loading = shallowRef(true)
@@ -94,7 +95,13 @@ const shouldCreateInitialDraft = computed(() =>
 const hasReviewArtifacts = computed(() =>
   Boolean(run.value?.preview_html && run.value.diff_text != null),
 )
-const isDraftDirty = computed(() => draft.value !== (run.value?.markdown_draft ?? ''))
+const savedDraftMarkdown = computed(() =>
+  run.value?.markdown_draft ?? selectedPageDetail.value?.source_markdown ?? '',
+)
+const isDraftDirty = computed(() => draft.value !== savedDraftMarkdown.value)
+const hasManualDraftChanges = computed(() =>
+  Boolean(draftManuallyEdited.value && draft.value.trim() && isDraftDirty.value),
+)
 const isReviewReady = computed(() => hasReviewArtifacts.value && !isDraftDirty.value)
 const pendingProposalDecision = computed(() => proposal.value?.status === 'ready')
 const canPublish = computed(() =>
@@ -123,6 +130,9 @@ const canSubmitEditRequest = computed(() =>
   Boolean(selectedPageId.value && chatDraft.value.trim() && !isChatBusy.value && !pendingProposalDecision.value),
 )
 const workspaceDisabled = computed(() => isChatBusy.value || pendingProposalDecision.value)
+const canSaveDraft = computed(() =>
+  Boolean(hasManualDraftChanges.value && !savingDraft.value && !workspaceDisabled.value),
+)
 const chatBusyLabel = computed(() => {
   if (creatingDraft.value || run.value?.status === 'queued' || run.value?.status === 'generating') {
     return 'Generating draft'
@@ -166,6 +176,7 @@ function resetEditorState(): void {
   run.value = undefined
   proposal.value = undefined
   draft.value = ''
+  draftManuallyEdited.value = false
   chatDraft.value = ''
   chatMessages.value = []
   draftVersions.value = []
@@ -185,6 +196,11 @@ function routePageId(): number | undefined {
 function selectPageForEditing(pageId?: number | null): void {
   if (!pageId) return
   void router.push({ path: '/editor', query: { pageId: String(pageId) } })
+}
+
+/** Marks that the currently visible Markdown was edited by the user. */
+function markDraftManuallyEdited(): void {
+  draftManuallyEdited.value = true
 }
 
 /** Returns whether an older draft run needs preview rendering queued. */
@@ -276,7 +292,7 @@ function failCurrentProposal(message: string): void {
 function currentProposalBase(): CreateProposalOptions {
   const baseMarkdown = draft.value.trim()
     ? draft.value
-    : (run.value?.markdown_draft ?? selectedPageDetail.value?.extracted_text ?? '')
+    : (run.value?.markdown_draft ?? selectedPageDetail.value?.source_markdown ?? '')
   const base: CreateProposalOptions = { baseMarkdown: baseMarkdown || undefined }
   if (run.value?.id) base.baseRunId = run.value.id
   return base
@@ -325,6 +341,7 @@ async function loadSelectedPage(pageId = selectedPageId.value): Promise<void> {
     selectedPageDetail.value = undefined
     run.value = undefined
     draft.value = ''
+    draftManuallyEdited.value = false
     draftVersions.value = []
     proposal.value = undefined
     return
@@ -344,7 +361,8 @@ async function loadSelectedPage(pageId = selectedPageId.value): Promise<void> {
     if (requestId !== pageRequestId || selectedPageId.value !== pageId) return
     selectedPageDetail.value = pageDetail
     run.value = activeRun ?? undefined
-    draft.value = activeRun?.markdown_draft ?? pageDetail.extracted_text ?? ''
+    draft.value = activeRun?.markdown_draft ?? pageDetail.source_markdown ?? ''
+    draftManuallyEdited.value = false
     if (activeRun?.id) {
       loadDraftVersions(activeRun.id).catch((err) => appendErrorMessage(err, 'Could not load draft versions.'))
     }
@@ -365,6 +383,7 @@ async function reloadRun(): Promise<void> {
     const updatedRun = await fetchPageEditRun(run.value.id)
     run.value = updatedRun
     draft.value = updatedRun.markdown_draft ?? draft.value
+    draftManuallyEdited.value = false
     if (needsDraftRender(updatedRun)) {
       void renderCurrentDraft(updatedRun)
     }
@@ -402,6 +421,7 @@ async function renderCurrentDraft(pageEditRun: PageEditRun): Promise<void> {
     const renderedRun = await saveDraft(pageEditRun.id, pageEditRun.markdown_draft ?? '')
     if (run.value?.id !== pageEditRun.id) return
     run.value = renderedRun
+    draftManuallyEdited.value = false
   } catch (error) {
     appendErrorMessage(error, 'Could not render the current draft.')
   }
@@ -409,7 +429,7 @@ async function renderCurrentDraft(pageEditRun: PageEditRun): Promise<void> {
 
 /** Saves manual Markdown changes into the app-side draft. */
 async function saveCurrentDraft(): Promise<void> {
-  if (savingDraft.value || !draft.value.trim()) return
+  if (!canSaveDraft.value) return
   const pageId = selectedPageId.value
   if (!run.value && !pageId) return
   savingDraft.value = true
@@ -420,6 +440,7 @@ async function saveCurrentDraft(): Promise<void> {
       run.value = await createManualDraftRun(pageId, draft.value)
     }
     draft.value = run.value?.markdown_draft ?? draft.value
+    draftManuallyEdited.value = false
     if (run.value?.id) {
       loadDraftVersions(run.value.id).catch((err) => appendErrorMessage(err, 'Could not load draft versions.'))
     }
@@ -444,6 +465,7 @@ async function submitEditRequest(): Promise<void> {
     try {
       run.value = await createPageEditRun(pageId, message)
       draft.value = run.value.markdown_draft ?? ''
+      draftManuallyEdited.value = false
     } catch (error) {
       appendErrorMessage(error, 'Could not start the page editor.')
     } finally {
@@ -471,6 +493,7 @@ async function applyCurrentProposal(): Promise<void> {
     proposal.value = response.proposal
     run.value = response.run
     draft.value = response.run.markdown_draft ?? draft.value
+    draftManuallyEdited.value = false
     void loadDraftVersions(response.run.id)
     appendChatMessage('assistant', 'Applied the proposal to the draft and queued the preview.')
   } catch (error) {
@@ -502,6 +525,7 @@ async function restoreCurrentDraftVersion(versionId: number): Promise<void> {
     const restoredRun = await restoreDraftVersion(run.value.id, versionId)
     run.value = restoredRun
     draft.value = restoredRun.markdown_draft ?? draft.value
+    draftManuallyEdited.value = false
     void loadDraftVersions(restoredRun.id)
     appendChatMessage('assistant', 'Restored the selected draft version and queued the preview.')
   } catch (error) {
@@ -519,7 +543,8 @@ async function resetCurrentDraft(): Promise<void> {
   try {
     await resetPageDraft(selectedPageId.value)
     run.value = undefined
-    draft.value = ''
+    draft.value = selectedPageDetail.value?.source_markdown ?? ''
+    draftManuallyEdited.value = false
     draftVersions.value = []
     proposal.value = undefined
   } finally {
@@ -671,6 +696,8 @@ onUnmounted(clearEditorTimers)
             :resetting-draft="resettingDraft"
             :loading="isChatBusy"
             :disabled="workspaceDisabled"
+            :can-save-draft="canSaveDraft"
+            @markdown-manual-change="markDraftManuallyEdited"
             @save-draft="saveCurrentDraft"
             @restore-draft-version="restoreCurrentDraftVersion"
             @reset-draft="resetCurrentDraft"

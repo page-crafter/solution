@@ -27,12 +27,14 @@ const props = defineProps<{
   restoringDraftVersion?: boolean
   resettingDraft?: boolean
   disabled?: boolean
+  canSaveDraft?: boolean
 }>()
 
 const emit = defineEmits<{
   saveDraft: []
   restoreDraftVersion: [versionId: number]
   resetDraft: []
+  markdownManualChange: []
 }>()
 
 const markdownRenderer = new MarkdownIt({
@@ -45,7 +47,7 @@ const activeMode = shallowRef<WorkspaceMode>('source')
 const historyDialogOpen = shallowRef(false)
 const resetDialogOpen = shallowRef(false)
 const hasDraft = computed(() => Boolean(props.run?.markdown_draft || draft.value.trim()))
-const baseMarkdown = computed(() => props.page?.extracted_text ?? '')
+const baseMarkdown = computed(() => props.page?.source_markdown ?? props.page?.extracted_text ?? '')
 const currentStorageXhtml = computed(() => props.page?.source_storage_xhtml?.trim() ?? '')
 const generatedStorageXhtml = computed(() => props.run?.generated_storage_xhtml?.trim() ?? '')
 const visibleStorageXhtml = computed(() => generatedStorageXhtml.value || currentStorageXhtml.value)
@@ -61,15 +63,20 @@ const renderedCurrentPageHtml = computed(() => {
 const visibleMarkdown = computed(() => (hasDraft.value ? draft.value : baseMarkdown.value))
 const renderedMarkdown = computed(() => DOMPurify.sanitize(markdownRenderer.render(visibleMarkdown.value)))
 const isDraftDirty = computed(() => hasDraft.value && draft.value !== (props.run?.markdown_draft ?? ''))
+const isUnmodifiedSourceMarkdown = computed(() =>
+  Boolean(!props.run && draft.value === baseMarkdown.value),
+)
 const shouldUseConfluencePreview = computed(() =>
   Boolean(props.run?.preview_html && hasDraft.value && !isDraftDirty.value),
 )
 const renderedPreviewHtml = computed(() =>
-  hasDraft.value ? renderedMarkdown.value : renderedCurrentPageHtml.value,
+  hasDraft.value && !isUnmodifiedSourceMarkdown.value
+    ? renderedMarkdown.value
+    : renderedCurrentPageHtml.value,
 )
 const sourceLabel = computed(() => (hasDraft.value ? 'Markdown' : 'Current page'))
-const canSaveDraft = computed(() =>
-  Boolean(hasDraft.value && draft.value.trim() && !props.saving && !props.disabled),
+const canSubmitDraftSave = computed(() =>
+  Boolean(props.canSaveDraft && hasDraft.value && draft.value.trim() && !props.saving && !props.disabled),
 )
 const currentDraftVersionId = computed(() => {
   const currentMarkdown = props.run?.markdown_draft
@@ -173,7 +180,7 @@ watch(proposalReady, (isReady) => {
           <VBtn
             color="primary"
             prepend-icon="mdi-content-save-outline"
-            :disabled="!canSaveDraft"
+            :disabled="!canSubmitDraftSave"
             data-testid="save-draft-button"
             @click="emit('saveDraft')"
           >
@@ -219,6 +226,7 @@ watch(proposalReady, (isReady) => {
           v-if="hasDraft"
           v-model="draft"
           :disabled="props.disabled || props.saving || props.applying"
+          @manual-change="emit('markdownManualChange')"
         />
         <div v-else class="current-page">
           <div class="current-page__meta">

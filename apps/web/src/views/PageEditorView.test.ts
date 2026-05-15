@@ -83,6 +83,7 @@ function makePageDetail(overrides: Partial<PageDetail> = {}): PageDetail {
   return {
     ...makePage(overrides),
     source_storage_xhtml: '<p>Current page</p>',
+    source_markdown: '# Current page',
     extracted_text: 'Current page text',
     ...overrides,
   }
@@ -113,7 +114,7 @@ function makeProposal(overrides: Partial<PageProposal> = {}): PageProposal {
     page_id: 1,
     run_id: null,
     instruction: 'Update the setup',
-    base_markdown: 'Current page text',
+    base_markdown: '# Current page',
     base_source: 'page',
     status: 'ready',
     proposed_markdown: '# Updated draft',
@@ -194,8 +195,8 @@ async function mountPageEditorView(options: { realEditChat?: boolean } = {}): Pr
     },
     MarkdownWorkspace: {
       name: 'MarkdownWorkspace',
-      props: ['modelValue', 'page', 'run', 'proposal', 'draftVersions'],
-      emits: ['restoreDraftVersion', 'saveDraft', 'update:modelValue'],
+      props: ['modelValue', 'page', 'run', 'proposal', 'draftVersions', 'canSaveDraft'],
+      emits: ['restoreDraftVersion', 'saveDraft', 'update:modelValue', 'markdownManualChange'],
       template: `
         <div data-testid="markdown-workspace">
           <span data-testid="workspace-page">{{ page?.extracted_text }}</span>
@@ -203,7 +204,13 @@ async function mountPageEditorView(options: { realEditChat?: boolean } = {}): Pr
           <span data-testid="workspace-proposal">{{ proposal?.status }}</span>
           <span data-testid="draft-version-count">{{ draftVersions?.length ?? 0 }}</span>
           <button data-testid="restore-draft-version-button" @click="$emit('restoreDraftVersion', 1)">Restore</button>
-          <button data-testid="save-draft-button" @click="$emit('saveDraft')">Save</button>
+          <button
+            data-testid="edit-draft-button"
+            @click="$emit('update:modelValue', modelValue + '\\n\\nEdited'); $emit('markdownManualChange')"
+          >
+            Edit
+          </button>
+          <button data-testid="save-draft-button" :disabled="!canSaveDraft" @click="$emit('saveDraft')">Save</button>
         </div>
       `,
     },
@@ -274,7 +281,7 @@ describe('PageEditorView', () => {
       status: 'converting',
       draft_status: 'Draft generated',
       preview_status: 'rendering',
-      markdown_draft: 'Current page text',
+      markdown_draft: '# Current page',
       generated_storage_xhtml: null,
       preview_html: null,
       diff_text: null,
@@ -329,21 +336,38 @@ describe('PageEditorView', () => {
     expect(createProposal).not.toHaveBeenCalled()
     expect(saveDraft).not.toHaveBeenCalled()
     expect(wrapper.get('[data-testid="workspace-page"]').text()).toBe('Current page text')
-    expect(wrapper.get('[data-testid="workspace-draft"]').text()).toBe('Current page text')
+    expect(wrapper.get('[data-testid="workspace-draft"]').text()).toBe('# Current page')
 
     wrapper.unmount()
   })
 
-  it('creates a manual draft run from the default Markdown on first save', async () => {
+  it('keeps Save disabled until the loaded Markdown is edited manually', async () => {
     const wrapper = await mountPageEditorView()
 
     await clickByTestId(wrapper, 'save-draft-button')
 
-    expect(createManualDraftRun).toHaveBeenCalledWith(1, 'Current page text')
+    expect(wrapper.get('[data-testid="save-draft-button"]').attributes('disabled')).toBeDefined()
+    expect(createManualDraftRun).not.toHaveBeenCalled()
     expect(createPageEditRun).not.toHaveBeenCalled()
     expect(createProposal).not.toHaveBeenCalled()
     expect(saveDraft).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="workspace-draft"]').text()).toBe('Current page text')
+
+    wrapper.unmount()
+  })
+
+  it('creates a manual draft run after the Markdown is manually changed', async () => {
+    const wrapper = await mountPageEditorView()
+
+    await clickByTestId(wrapper, 'edit-draft-button')
+    expect(wrapper.get('[data-testid="save-draft-button"]').attributes('disabled')).toBeUndefined()
+
+    await clickByTestId(wrapper, 'save-draft-button')
+
+    expect(createManualDraftRun).toHaveBeenCalledWith(1, '# Current page\n\nEdited')
+    expect(createPageEditRun).not.toHaveBeenCalled()
+    expect(createProposal).not.toHaveBeenCalled()
+    expect(saveDraft).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="workspace-draft"]').text()).toBe('# Current page')
 
     wrapper.unmount()
   })
@@ -372,10 +396,24 @@ describe('PageEditorView', () => {
 
     expect(createPageEditRun).not.toHaveBeenCalled()
     expect(createProposal).toHaveBeenCalledWith(1, 'Update docs', {
-      baseMarkdown: 'Current page text',
+      baseMarkdown: '# Current page',
     })
     expect(createManualDraftRun).not.toHaveBeenCalled()
     expect(wrapper.get('[data-testid="message-count"]').text()).toBe('1')
+
+    wrapper.unmount()
+  })
+
+  it('keeps preservation markers in the first proposal base', async () => {
+    const sourceMarkdown = '# Current page\n\n{{confluence-storage:0001-abc123abc123}}'
+    vi.mocked(fetchPage).mockResolvedValue(makePageDetail({ source_markdown: sourceMarkdown }))
+    const wrapper = await mountPageEditorView()
+
+    await clickByTestId(wrapper, 'send-edit-request-button')
+
+    expect(createProposal).toHaveBeenCalledWith(1, 'Update docs', {
+      baseMarkdown: sourceMarkdown,
+    })
 
     wrapper.unmount()
   })
@@ -504,7 +542,7 @@ describe('PageEditorView', () => {
     await nextTick()
 
     expect(createProposal).toHaveBeenCalledWith(1, 'Update docs', {
-      baseMarkdown: 'Current page text',
+      baseMarkdown: '# Current page',
     })
     expect(createPageEditRun).not.toHaveBeenCalled()
     expect(wrapper.findAll('.edit-chat__message--busy')).toHaveLength(1)

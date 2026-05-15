@@ -61,6 +61,7 @@ export interface ConfluencePage {
 
 export interface PageDetail extends ConfluencePage {
   source_storage_xhtml: string
+  source_markdown: string
   extracted_text: string
 }
 

@@ -63,6 +63,7 @@ function makePageDetail(overrides: Partial<PageDetail> = {}): PageDetail {
   return {
     ...makePage(overrides),
     source_storage_xhtml: '<p>Source</p>',
+    source_markdown: 'Source',
     extracted_text: 'Source',
     ...overrides,
   }

@@ -32,6 +32,7 @@ function makePage(overrides: Partial<PageDetail> = {}): PageDetail {
     draft_state: 'Published',
     last_synced_at: '2026-05-10T10:00:00Z',
     source_storage_xhtml: '<p>Current page</p>',
+    source_markdown: '# Current page',
     extracted_text: 'Current page text',
     ...overrides,
   }
@@ -90,8 +91,14 @@ async function mountWorkspace(
       stubs: {
         MarkdownEditor: {
           props: ['modelValue'],
-          emits: ['update:modelValue'],
-          template: '<textarea data-testid="markdown-editor" :value="modelValue" />',
+          emits: ['manualChange', 'update:modelValue'],
+          template: `
+            <textarea
+              data-testid="markdown-editor"
+              :value="modelValue"
+              @input="$emit('update:modelValue', $event.target.value); $emit('manualChange')"
+            />
+          `,
         },
       },
     },
@@ -132,6 +139,71 @@ describe('MarkdownWorkspace', () => {
 
     const iframe = wrapper.get('iframe[title="Confluence rendered preview"]')
     expect(iframe.attributes('srcdoc')).toBe('<p>Preview</p>')
+  })
+
+  it('keeps Save disabled until manual draft changes are allowed by the parent', async () => {
+    const wrapper = await mountWorkspace({
+      modelValue: '# Current page',
+      canSaveDraft: false,
+    })
+
+    expect(wrapper.get('[data-testid="save-draft-button"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.setProps({
+      modelValue: '# Current page\n\nEdited',
+      canSaveDraft: true,
+    })
+    await flushPromises()
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="save-draft-button"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('emits manual Markdown changes from the editor', async () => {
+    const wrapper = await mountWorkspace({
+      modelValue: '# Current page',
+      canSaveDraft: false,
+    })
+
+    await wrapper.get('[data-testid="markdown-editor"]').setValue('# Current page\n\nEdited')
+
+    expect(wrapper.emitted('markdownManualChange')).toHaveLength(1)
+  })
+
+  it('uses current Storage XHTML for an unmodified no-draft preview', async () => {
+    const sourceMarkdown = 'Current page\n\n{{confluence-storage:0001-abc123abc123}}'
+    const page = makePage({
+      source_storage_xhtml: '<p>Current page</p><ac:structured-macro ac:name="gallery"></ac:structured-macro>',
+      source_markdown: sourceMarkdown,
+    })
+    const wrapper = await mountWorkspace({
+      page,
+      modelValue: sourceMarkdown,
+    })
+
+    await clickMode(wrapper, 'Preview')
+
+    const preview = wrapper.get('.markdown-preview')
+    expect(preview.html()).toContain('[Confluence macro: gallery]')
+    expect(preview.html()).not.toContain('confluence-storage')
+  })
+
+  it('uses local Markdown preview after editing an unsaved source draft', async () => {
+    const sourceMarkdown = 'Current page\n\n{{confluence-storage:0001-abc123abc123}}'
+    const page = makePage({
+      source_storage_xhtml: '<p>Current page</p><ac:structured-macro ac:name="gallery"></ac:structured-macro>',
+      source_markdown: sourceMarkdown,
+    })
+    const wrapper = await mountWorkspace({
+      page,
+      modelValue: `${sourceMarkdown}\n\nEdited`,
+    })
+
+    await clickMode(wrapper, 'Preview')
+
+    expect(wrapper.html()).toContain('Edited')
+    expect(wrapper.html()).toContain('confluence-storage')
+    expect(wrapper.html()).not.toContain('[Confluence macro: gallery]')
   })
 
   it('falls back to sanitized local Markdown rendering before preview is ready', async () => {

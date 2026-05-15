@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from cm_shared.confluence.storage_markdown import storage_xhtml_to_markdown
 from cm_shared.db.base import Base
 
 
@@ -29,3 +30,8 @@ class ConfluencePage(Base):
     draft_state: Mapped[str] = mapped_column(String(64), default="Published")
     last_synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    @property
+    def source_markdown(self) -> str:
+        """Return editable Markdown derived from the current Confluence Storage XHTML."""
+        return storage_xhtml_to_markdown(self.source_storage_xhtml) or self.extracted_text

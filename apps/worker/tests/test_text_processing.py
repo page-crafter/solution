@@ -5,6 +5,11 @@ from cm_shared.confluence.move_validation import (
     PageMoveOutsideSpaceError,
     ensure_move_stays_in_space,
 )
+from cm_shared.confluence.storage_markdown import (
+    PRESERVED_STORAGE_MARKER_RE,
+    build_preserved_storage_map,
+    storage_xhtml_to_markdown,
+)
 from cm_shared.settings.app import get_settings
 from cm_worker.confluence.client import ConfluenceClient
 from cm_worker.confluence.preview import preview_has_rendered_content, storage_for_preview
@@ -20,6 +25,101 @@ def test_extract_text_from_storage_keeps_macro_hint() -> None:
 
     assert "Hello" in text
     assert "Confluence macro: toc" in text
+
+
+def test_storage_xhtml_to_markdown_converts_common_blocks() -> None:
+    """Storage XHTML is converted into editable Markdown instead of flat text."""
+    markdown = storage_xhtml_to_markdown(
+        '<h1>Install</h1>'
+        '<p>Hello <strong>world</strong> and <em>team</em>.</p>'
+        '<ul><li>One</li><li>Two <a href="https://example.com">link</a></li></ul>'
+        '<blockquote><p>Note</p></blockquote>'
+        '<hr />'
+    )
+
+    assert markdown == (
+        "# Install\n\n"
+        "Hello **world** and *team*.\n\n"
+        "- One\n"
+        "- Two [link](https://example.com)\n\n"
+        "> Note\n\n"
+        "---"
+    )
+
+
+def test_storage_xhtml_to_markdown_converts_tables() -> None:
+    """Storage XHTML tables become GitHub-flavored Markdown tables."""
+    markdown = storage_xhtml_to_markdown(
+        "<table><tbody>"
+        "<tr><th>A</th><th>B</th></tr>"
+        "<tr><td>1</td><td>2</td></tr>"
+        "</tbody></table>"
+    )
+
+    assert markdown == "| A | B |\n| --- | --- |\n| 1 | 2 |"
+
+
+def test_storage_xhtml_to_markdown_preserves_images_as_markers() -> None:
+    """Confluence images become opaque markers instead of lossy filenames."""
+    storage = (
+        '<p>Diagram</p><ac:image><ri:attachment ri:filename="diagram.png">'
+        "</ri:attachment></ac:image>"
+    )
+
+    markdown = storage_xhtml_to_markdown(storage)
+    marker = PRESERVED_STORAGE_MARKER_RE.search(markdown)
+    preserved = build_preserved_storage_map(storage)
+
+    assert marker
+    assert markdown == f"Diagram\n\n{marker.group(0)}"
+    assert preserved[marker.group(0)] == (
+        '<ac:image><ri:attachment ri:filename="diagram.png"></ri:attachment></ac:image>'
+    )
+    assert "diagram.png" not in markdown
+
+
+def test_storage_xhtml_to_markdown_preserves_custom_macro_with_body() -> None:
+    """Custom macros keep their original Storage XHTML behind a stable marker."""
+    storage = (
+        '<ac:structured-macro ac:name="panel">'
+        '<ac:parameter ac:name="title">Internal title</ac:parameter>'
+        "<ac:rich-text-body><p>Keep <strong>this</strong></p></ac:rich-text-body>"
+        "</ac:structured-macro>"
+    )
+
+    markdown = storage_xhtml_to_markdown(storage)
+    preserved = build_preserved_storage_map(storage)
+
+    assert PRESERVED_STORAGE_MARKER_RE.fullmatch(markdown)
+    assert preserved[markdown] == storage
+    assert "Keep **this**" not in markdown
+
+
+def test_storage_xhtml_to_markdown_preserves_self_closing_custom_macro() -> None:
+    """Self-closing custom macros are preserved as opaque markers."""
+    storage = '<ac:structured-macro ac:name="toc"></ac:structured-macro>'
+
+    markdown = storage_xhtml_to_markdown(storage)
+    preserved = build_preserved_storage_map(storage)
+
+    assert PRESERVED_STORAGE_MARKER_RE.fullmatch(markdown)
+    assert preserved[markdown] == storage
+
+
+def test_storage_xhtml_to_markdown_renders_code_macro_as_markdown() -> None:
+    """Confluence code macros become editable fenced Markdown blocks."""
+    storage = (
+        '<ac:structured-macro ac:name="code">'
+        '<ac:parameter ac:name="language">bash</ac:parameter>'
+        "<ac:plain-text-body>kubectl get pods</ac:plain-text-body>"
+        "</ac:structured-macro>"
+    )
+
+    markdown = storage_xhtml_to_markdown(storage)
+    preserved = build_preserved_storage_map(storage)
+
+    assert markdown == "```bash\nkubectl get pods\n```"
+    assert preserved == {}
 
 
 def test_convert_markdown_to_storage_uses_md2conf(monkeypatch) -> None:
@@ -55,6 +155,76 @@ def test_convert_markdown_to_storage_normalizes_tasklists(monkeypatch) -> None:
     assert "<ul>" in storage
     assert "[ ] write docs" in storage
     assert "[x] ship fix" in storage
+
+
+def test_convert_markdown_to_storage_restores_preserved_image(monkeypatch) -> None:
+    """Known preservation markers restore their original Storage XHTML without wrapper tags."""
+    marker = "{{confluence-storage:0001-abc123abc123}}"
+    image_storage = '<ac:image><ri:attachment ri:filename="diagram.png"></ri:attachment></ac:image>'
+    monkeypatch.setenv("CONFLUENCE_BASE_URL", "http://confluence:8090")
+    monkeypatch.setenv("CONFLUENCE_SPACE_KEY", "DEV")
+    get_settings.cache_clear()
+    try:
+        storage = convert_markdown_to_storage(
+            f"# Title\n\n{marker}\n",
+            {marker: image_storage},
+        )
+    finally:
+        get_settings.cache_clear()
+
+    assert image_storage in storage
+    assert f"<p>{image_storage}</p>" not in storage
+
+
+def test_convert_markdown_to_storage_restores_preserved_custom_macro(monkeypatch) -> None:
+    """Known custom macro markers restore their original Storage XHTML."""
+    marker = "{{confluence-storage:0002-def456def456}}"
+    macro_storage = (
+        '<ac:structured-macro ac:name="custom">'
+        '<ac:parameter ac:name="id">42</ac:parameter>'
+        "</ac:structured-macro>"
+    )
+    monkeypatch.setenv("CONFLUENCE_BASE_URL", "http://confluence:8090")
+    monkeypatch.setenv("CONFLUENCE_SPACE_KEY", "DEV")
+    get_settings.cache_clear()
+    try:
+        storage = convert_markdown_to_storage(
+            f"{marker}\n\n{marker}\n",
+            {marker: macro_storage},
+        )
+    finally:
+        get_settings.cache_clear()
+
+    assert storage.count(macro_storage) == 2
+
+
+def test_convert_markdown_to_storage_drops_removed_preserved_marker(monkeypatch) -> None:
+    """If a marker is removed from the Markdown, its macro is not reinserted."""
+    marker = "{{confluence-storage:0001-abc123abc123}}"
+    image_storage = '<ac:image><ri:attachment ri:filename="diagram.png"></ri:attachment></ac:image>'
+    monkeypatch.setenv("CONFLUENCE_BASE_URL", "http://confluence:8090")
+    monkeypatch.setenv("CONFLUENCE_SPACE_KEY", "DEV")
+    get_settings.cache_clear()
+    try:
+        storage = convert_markdown_to_storage("# Title\n\nNo image\n", {marker: image_storage})
+    finally:
+        get_settings.cache_clear()
+
+    assert image_storage not in storage
+
+
+def test_convert_markdown_to_storage_leaves_unknown_marker_as_text(monkeypatch) -> None:
+    """Unknown preservation markers stay as text instead of restoring arbitrary storage."""
+    marker = "{{confluence-storage:9999-deadbeefcafe}}"
+    monkeypatch.setenv("CONFLUENCE_BASE_URL", "http://confluence:8090")
+    monkeypatch.setenv("CONFLUENCE_SPACE_KEY", "DEV")
+    get_settings.cache_clear()
+    try:
+        storage = convert_markdown_to_storage(marker)
+    finally:
+        get_settings.cache_clear()
+
+    assert marker in storage
 
 
 def test_format_storage_xhtml_for_diff_splits_storage_tags() -> None:

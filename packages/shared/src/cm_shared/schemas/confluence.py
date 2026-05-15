@@ -30,6 +30,7 @@ class PageDetail(PageRead):
     """Serialize full page content used by the page editor workspace."""
 
     source_storage_xhtml: str
+    source_markdown: str
     extracted_text: str
 
 

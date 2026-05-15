@@ -198,7 +198,7 @@ def capture_enqueue(monkeypatch):
 
 
 def test_proposal_can_chain_from_ready_proposal() -> None:
-    page = SimpleNamespace(id=7, extracted_text="Original page")
+    page = SimpleNamespace(id=7, extracted_text="Original page", source_markdown="# Original page")
     base_proposal = SimpleNamespace(
         id="proposal-1",
         page_id=7,
@@ -222,7 +222,7 @@ def test_proposal_can_chain_from_ready_proposal() -> None:
 
 
 def test_proposal_rejects_unready_base_proposal() -> None:
-    page = SimpleNamespace(id=7, extracted_text="Original page")
+    page = SimpleNamespace(id=7, extracted_text="Original page", source_markdown="# Original page")
     base_proposal = SimpleNamespace(
         id="proposal-1",
         page_id=7,
@@ -245,7 +245,7 @@ def test_proposal_rejects_unready_base_proposal() -> None:
 
 
 def test_proposal_can_use_client_draft_as_base() -> None:
-    page = SimpleNamespace(id=7, extracted_text="Original page")
+    page = SimpleNamespace(id=7, extracted_text="Original page", source_markdown="# Original page")
     run = SimpleNamespace(id="run-1", page_id=7, status="previewing")
 
     run_id, base_markdown, base_source = proposal_base(
@@ -264,7 +264,7 @@ def test_proposal_can_use_client_draft_as_base() -> None:
 
 
 def test_proposal_rejects_client_draft_for_another_page() -> None:
-    page = SimpleNamespace(id=7, extracted_text="Original page")
+    page = SimpleNamespace(id=7, extracted_text="Original page", source_markdown="# Original page")
     run = SimpleNamespace(id="run-1", page_id=8, status="previewing")
 
     with pytest.raises(HTTPException) as exc_info:
@@ -279,6 +279,24 @@ def test_proposal_rejects_client_draft_for_another_page() -> None:
         )
 
     assert exc_info.value.status_code == 409
+
+
+def test_proposal_uses_source_markdown_for_page_base() -> None:
+    page = SimpleNamespace(
+        id=7,
+        extracted_text="Original page text",
+        source_markdown="# Original page",
+    )
+
+    run_id, base_markdown, base_source = proposal_base(
+        FakeSession(),
+        page,
+        CreateProposalRequest(message="Add setup steps"),
+    )
+
+    assert run_id is None
+    assert base_markdown == "# Original page"
+    assert base_source == "page"
 
 
 def test_create_manual_draft_queues_render_without_generation(monkeypatch) -> None:

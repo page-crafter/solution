@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from cm_shared.confluence.storage_markdown import build_preserved_storage_map
 from cm_shared.db.session import SessionLocal
 from cm_shared.models.confluence import ConfluencePage
 from cm_shared.models.page_editor import DraftArtifact, PageEditRun, PageProposal
@@ -48,7 +49,10 @@ def render_draft_artifacts(session, run: PageEditRun, page: ConfluencePage) -> N
     page.draft_state = "Draft generated"
     session.commit()
 
-    storage = convert_markdown_to_storage(run.markdown_draft)
+    storage = convert_markdown_to_storage(
+        run.markdown_draft,
+        build_preserved_storage_map(page.source_storage_xhtml),
+    )
     run.generated_storage_xhtml = storage
     run.diff_text = build_storage_diff(page.source_storage_xhtml, storage)
     run.status = "previewing"
@@ -266,7 +270,10 @@ def convert_markdown(run_id: str) -> None:
         try:
             if not run.markdown_draft:
                 raise ValueError("Markdown draft is empty")
-            storage = convert_markdown_to_storage(run.markdown_draft)
+            storage = convert_markdown_to_storage(
+                run.markdown_draft,
+                build_preserved_storage_map(page.source_storage_xhtml),
+            )
             run.generated_storage_xhtml = storage
             run.diff_text = build_storage_diff(page.source_storage_xhtml, storage)
             run.status = "converted"

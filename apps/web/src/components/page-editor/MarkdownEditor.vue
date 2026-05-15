@@ -11,10 +11,15 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 
+const emit = defineEmits<{
+  manualChange: []
+}>()
+
 const editorHost = useTemplateRef<HTMLDivElement>('editorHost')
 const editorView = shallowRef<EditorView>()
 const editableCompartment = new Compartment()
 const canEdit = computed(() => !props.disabled)
+let syncingExternalValue = false
 
 /** Replaces CodeMirror content when the parent model changes externally. */
 function syncExternalValue(value: string): void {
@@ -22,9 +27,14 @@ function syncExternalValue(value: string): void {
   if (!view) return
   const currentValue = view.state.doc.toString()
   if (currentValue === value) return
-  view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: value },
-  })
+  syncingExternalValue = true
+  try {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: value },
+    })
+  } finally {
+    syncingExternalValue = false
+  }
 }
 
 /** Wraps the current selection with inline Markdown syntax. */
@@ -86,6 +96,7 @@ onMounted(() => {
         EditorView.updateListener.of((update) => {
           if (!update.docChanged) return
           model.value = update.state.doc.toString()
+          if (!syncingExternalValue) emit('manualChange')
         }),
       ],
     }),
