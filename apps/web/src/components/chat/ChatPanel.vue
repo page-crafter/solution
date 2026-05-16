@@ -242,16 +242,16 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: stretch;
+  flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
 }
 
 .chat-panel {
   display: grid;
   grid-template-rows: 1fr auto;
-  height: calc(100vh - 138px);
-  height: calc(100dvh - 138px);
-  max-height: calc(100vh - 138px);
-  max-height: calc(100dvh - 138px);
+  height: 100%;
+  max-height: 100%;
   min-height: 0;
   overflow: hidden;
 }
@@ -266,8 +266,7 @@ onMounted(async () => {
   gap: 14px;
   width: 292px;
   min-width: 292px;
-  max-height: calc(100vh - 138px);
-  max-height: calc(100dvh - 138px);
+  max-height: 100%;
   min-height: 0;
   overflow: hidden;
 }
@@ -283,10 +282,8 @@ onMounted(async () => {
   }
 
   .chat-panel {
-    height: min(64vh, calc(100vh - 138px));
-    height: min(64dvh, calc(100dvh - 138px));
-    max-height: calc(100vh - 138px);
-    max-height: calc(100dvh - 138px);
+    height: min(64dvh, 100%);
+    max-height: 100%;
   }
 
   .chat-sidebar {

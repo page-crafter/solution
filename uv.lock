@@ -5,6 +5,7 @@ requires-python = "==3.13.*"
 [manifest]
 members = [
     "cm-api",
+    "cm-beat",
     "cm-shared",
     "cm-worker",
     "page-crafter",
@@ -250,6 +251,21 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
+]
+
+[[package]]
+name = "cm-beat"
+version = "0.1.0"
+source = { editable = "apps/beat" }
+dependencies = [
+    { name = "celery", extra = ["redis"] },
+    { name = "cm-shared" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "celery", extras = ["redis"], specifier = ">=5.5.3" },
+    { name = "cm-shared", editable = "packages/shared" },
 ]
 
 [[package]]

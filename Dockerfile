@@ -25,6 +25,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/shared packages/shared
 COPY apps/api apps/api
+COPY apps/beat apps/beat
 COPY apps/worker apps/worker
 
 RUN --mount=type=cache,target=/root/.cache/uv \

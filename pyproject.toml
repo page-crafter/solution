@@ -8,6 +8,7 @@ dependencies = []
 members = [
   "packages/shared",
   "apps/api",
+  "apps/beat",
   "apps/worker"
 ]
 
@@ -18,10 +19,11 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests", "apps/worker/tests"]
+testpaths = ["apps/api/tests", "apps/beat/tests", "apps/worker/tests"]
 pythonpath = [
   "packages/shared/src",
   "apps/api/src",
+  "apps/beat/src",
   "apps/worker/src"
 ]
 

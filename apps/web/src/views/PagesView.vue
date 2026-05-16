@@ -13,9 +13,9 @@ import {
 import type { PageMovePosition } from '../api/pages'
 import { cancelRun, fetchActivePageEditRun } from '../api/pageEditor'
 import ActionValidationDialog from '../components/common/ActionValidationDialog.vue'
+import AdminPageShell from '../components/common/AdminPageShell.vue'
 import AppSpinner from '../components/common/AppSpinner.vue'
 import JobStateDialog from '../components/common/JobStateDialog.vue'
-import PageHeader from '../components/common/PageHeader.vue'
 import PageDetailPanel from '../components/pages/PageDetailPanel.vue'
 import PageTree from '../components/pages/PageTree.vue'
 import type { ConfluencePage, JobRead, PageDetail, PageEditRun } from '../types/api'
@@ -440,18 +440,17 @@ onMounted(loadPages)
 </script>
 
 <template>
-  <VContainer fluid class="pa-4">
-    <PageHeader
-      title="Pages"
-      description="Browse synced Confluence pages and manage app-side drafts."
-    >
-      <template #actions>
-        <VBtn variant="tonal" prepend-icon="mdi-file-plus-outline" @click="openCreateDialog()">
-          New empty page
-        </VBtn>
-        <VBtn color="primary" prepend-icon="mdi-sync" @click="runSync">Sync space</VBtn>
-      </template>
-    </PageHeader>
+  <AdminPageShell
+    title="Pages"
+    description="Browse synced Confluence pages and manage app-side drafts."
+    fill
+  >
+    <template #actions>
+      <VBtn variant="tonal" prepend-icon="mdi-file-plus-outline" @click="openCreateDialog()">
+        New empty page
+      </VBtn>
+      <VBtn color="primary" prepend-icon="mdi-sync" @click="runSync">Sync space</VBtn>
+    </template>
 
     <JobStateDialog
       :job-id="activePageJob?.id"
@@ -579,7 +578,7 @@ onMounted(loadPages)
         </VCardActions>
       </VCard>
     </VDialog>
-  </VContainer>
+  </AdminPageShell>
 </template>
 
 <style scoped>
@@ -600,13 +599,14 @@ onMounted(loadPages)
 }
 
 .content-row {
-  height: calc(100vh - 130px);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .content-col {
-  height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .content-col > * {

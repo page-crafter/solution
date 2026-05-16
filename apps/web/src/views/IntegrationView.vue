@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, shallowRef } from 'vue'
+import AdminPageShell from '../components/common/AdminPageShell.vue'
 import CollapsiblePanel from '../components/common/CollapsiblePanel.vue'
-import PageHeader from '../components/common/PageHeader.vue'
 import SectionCard from '../components/common/SectionCard.vue'
 import { defaultChatSettings } from '../composables/useChatSettings'
 import type { ChatQueryMode, ChatQuerySettings } from '../types/api'
@@ -173,12 +173,11 @@ function resetQuery(): void {
 </script>
 
 <template>
-  <VContainer fluid class="pa-6">
-    <PageHeader
-      title="Integration"
-      description="Embed the documentation assistant on any website."
-    >
-      <template #actions>
+  <AdminPageShell
+    title="Integration"
+    description="Embed the documentation assistant on any website."
+  >
+    <template #actions>
       <VBtnToggle
         v-model="mode"
         mandatory
@@ -196,8 +195,7 @@ function resetQuery(): void {
           Widget
         </VBtn>
       </VBtnToggle>
-      </template>
-    </PageHeader>
+    </template>
 
     <!-- Embed URL bar -->
     <VCard class="surface-border embed-url-card mb-4" variant="flat">
@@ -364,7 +362,7 @@ function resetQuery(): void {
       Users must have the <code>chat</code> or <code>admin</code> role.
       Without an active session, a sign-in prompt is shown inside the embed.
     </VAlert>
-  </VContainer>
+  </AdminPageShell>
 </template>
 
 <style scoped>

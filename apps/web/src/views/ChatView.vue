@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import PageHeader from '../components/common/PageHeader.vue'
+import AdminPageShell from '../components/common/AdminPageShell.vue'
 import ChatPanel from '../components/chat/ChatPanel.vue'
 </script>
 
 <template>
-  <VContainer fluid class="pa-4">
-    <PageHeader
-      title="Documentation Chat"
-      description="Ask questions grounded in synced Confluence documentation."
-    />
+  <AdminPageShell
+    title="Documentation Chat"
+    description="Ask questions grounded in synced Confluence documentation."
+    fill
+  >
     <ChatPanel />
-  </VContainer>
+  </AdminPageShell>
 </template>

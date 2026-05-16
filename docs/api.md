@@ -245,7 +245,7 @@ The following Celery tasks are dispatched by the API. They are not directly call
 | Task | Triggered by |
 |------|-------------|
 | `cm_worker.sync_space` | `POST /sync/runs` |
-| `cm_worker.scheduled_sync` | Celery beat (cron) |
+| `cm_worker.scheduled_sync` | `cm-beat` Celery Beat scheduler (cron) |
 | `cm_worker.refresh_page` | `POST /confluence/pages/{id}/refresh` |
 | `cm_worker.create_empty_page` | `POST /confluence/pages` |
 | `cm_worker.delete_page` | `DELETE /confluence/pages/{id}` |

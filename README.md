@@ -81,7 +81,7 @@ uv run uvicorn cm_api.main:app --reload --app-dir apps/api/src
 uv run celery -A cm_worker.celery_app worker --loglevel=info
 
 # Beat scheduler (nightly sync)
-uv run celery -A cm_worker.celery_app beat --loglevel=info
+uv run celery -A cm_beat.celery_app beat --loglevel=info
 
 # Frontend
 npm install
@@ -93,6 +93,7 @@ npm run dev:web   # http://localhost:5173, proxies /api to localhost:8000
 ```none
 apps/
   api/        FastAPI application (cm-api)
+  beat/       Celery Beat scheduler (cm-beat)
   worker/     Celery worker (cm-worker)
   web/        Vue 3 frontend
 packages/

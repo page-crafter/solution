@@ -4,9 +4,9 @@ import { fetchKpis } from '../api/kpis'
 import { fetchSpaces } from '../api/spaces'
 import { fetchLightRagStatus } from '../api/lightrag'
 import { fetchTaskHistory } from '../api/jobs'
+import AdminPageShell from '../components/common/AdminPageShell.vue'
 import AppSpinner from '../components/common/AppSpinner.vue'
 import JobStatusChip from '../components/common/JobStatusChip.vue'
-import PageHeader from '../components/common/PageHeader.vue'
 import SectionCard from '../components/common/SectionCard.vue'
 import KpiCard from '../components/dashboard/KpiCard.vue'
 import type { KpiCard as KpiCardType, SpaceStat, LightRagStatus, TaskExecution } from '../types/api'
@@ -48,12 +48,11 @@ onMounted(loadDashboard)
 </script>
 
 <template>
-  <VContainer fluid class="pa-6">
-    <PageHeader
-      title="Documentation dashboard"
-      description="Track sync, indexing, draft, and publishing readiness."
-    >
-      <template #actions>
+  <AdminPageShell
+    title="Documentation dashboard"
+    description="Track sync, indexing, draft, and publishing readiness."
+  >
+    <template #actions>
       <VBtn
         variant="tonal"
         prepend-icon="mdi-refresh"
@@ -63,8 +62,7 @@ onMounted(loadDashboard)
       >
         Refresh
       </VBtn>
-      </template>
-    </PageHeader>
+    </template>
 
     <AppSpinner v-if="loading" label="Loading documentation metrics" />
 
@@ -196,7 +194,7 @@ onMounted(loadDashboard)
         </VCol>
       </VRow>
     </template>
-  </VContainer>
+  </AdminPageShell>
 </template>
 
 <style scoped>

@@ -74,7 +74,7 @@ uv run uvicorn cm_api.main:app --reload --app-dir apps/api/src
 uv run celery -A cm_worker.celery_app worker --loglevel=info
 
 # Beat scheduler (optional — triggers nightly sync)
-uv run celery -A cm_worker.celery_app beat --loglevel=info
+uv run celery -A cm_beat.celery_app beat --loglevel=info
 ```
 
 ### Frontend
@@ -93,7 +93,7 @@ docker compose build
   context: .  (workspace root)
   └── Dockerfile
       ├── web-build stage  → node:24 build of apps/web
-      └── runtime stage    → python:3.13-slim with cm-api, cm-worker, cm-shared, and Vue dist
+      └── runtime stage    → python:3.13-slim with cm-api, cm-beat, cm-worker, cm-shared, and Vue dist
 ```
 
 ### Unified app image
@@ -103,8 +103,9 @@ docker compose build
 - Dependencies installed with `uv sync --frozen --no-dev --all-packages`
 - `UV_COMPILE_BYTECODE=1` — bytecode compiled at build time, not first import
 - BuildKit cache mount on `/root/.cache/uv` — fast rebuilds when `uv.lock` unchanged
-- `api` and `worker` both use `page-crafter:local`
+- `api`, `beat`, and `worker` all use `page-crafter:local`
 - `api` runs Uvicorn and serves both `/api/*` and the compiled Vue SPA
+- `beat` runs Celery Beat from the same image and publishes scheduled tasks to Redis
 - `worker` runs Celery from the same image with a different Compose command
 - `/config.json` is served by FastAPI with `Cache-Control: no-store`
 

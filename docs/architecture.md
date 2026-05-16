@@ -34,6 +34,12 @@ Browser
 │postgres │ │ redis │
 │  5432   │ │ 6379  │
 └─────────┘ └───────┘
+              ▲
+              │ scheduled tasks
+       ┌─────────────┐
+       │ beat        │
+       │ Celery Beat │
+       └─────────────┘
 ```
 
 ### Component responsibilities
@@ -41,6 +47,7 @@ Browser
 | Service | Image | Role |
 |---------|-------|------|
 | `api` | page-crafter:local | FastAPI. Serves the compiled Vue SPA, handles auth/read models, and queues long-running work to the worker via Celery. Never performs sync, RAG, or publish directly. |
+| `beat` | page-crafter:local | Celery Beat scheduler. Publishes cron-driven worker task messages to Redis using `SYNC_CRON`. |
 | `worker` | page-crafter:local | Celery worker from the same image. Runs sync, Markdown generation, LLM proposals, preview rendering, and publish tasks. |
 | `postgres` | postgres:16 | Stores all app state: synced pages, draft runs, proposals, chat sessions, job history. Embeddings stored as float arrays. |
 | `redis` | redis:7-alpine | Celery broker and result backend. |
@@ -100,6 +107,7 @@ POST /chat/sessions/{id}/stream
 confluenceManager2/
 ├── apps/
 │   ├── api/          FastAPI application (cm-api)
+│   ├── beat/         Celery Beat scheduler (cm-beat)
 │   ├── worker/       Celery worker (cm-worker)
 │   └── web/          Vue 3 frontend
 ├── packages/
@@ -113,7 +121,7 @@ confluenceManager2/
 │   ├── keycloak/     Realm import JSON
 │   └── confluence/   atlassian-agent.jar
 ├── docs/             This documentation
-├── Dockerfile        Unified app image for API, worker, and Vue dist
+├── Dockerfile        Unified app image for API, Beat, worker, and Vue dist
 └── docker-compose.yml
 ```
 

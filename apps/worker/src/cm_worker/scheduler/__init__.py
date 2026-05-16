@@ -1,1 +1,0 @@
-"""Scheduled worker job configuration."""
