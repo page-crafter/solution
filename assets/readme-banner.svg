@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="420" viewBox="0 0 1500 420" role="img" aria-labelledby="title desc">
+  <title id="title">Page Crafter</title>
+  <desc id="desc">Banner for Page Crafter, an AI-assisted Confluence documentation manager.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f7fbf8"/>
+      <stop offset="45%" stop-color="#edf7f3"/>
+      <stop offset="100%" stop-color="#f8f3e6"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f9d8a"/>
+      <stop offset="55%" stop-color="#3578e5"/>
+      <stop offset="100%" stop-color="#e3a72f"/>
+    </linearGradient>
+    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M 34 0 L 0 0 0 34" fill="none" stroke="#22332f" stroke-opacity="0.06" stroke-width="1"/>
+    </pattern>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#18322f" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <rect width="1500" height="420" rx="30" fill="url(#bg)"/>
+  <rect width="1500" height="420" rx="30" fill="url(#grid)"/>
+
+  <path d="M-40 320 C 190 228, 350 398, 560 300 S 930 110, 1190 205 1430 180, 1550 86"
+        fill="none" stroke="url(#accent)" stroke-width="9" stroke-linecap="round" opacity="0.34"/>
+  <path d="M1020 24 C 1165 82, 1300 54, 1515 132" fill="none" stroke="#1f9d8a" stroke-width="18" stroke-linecap="round" opacity="0.12"/>
+  <path d="M-12 82 C 145 10, 275 40, 410 116" fill="none" stroke="#e3a72f" stroke-width="15" stroke-linecap="round" opacity="0.18"/>
+
+  <g transform="translate(100 78)">
+    <rect x="0" y="0" width="630" height="264" rx="22" fill="#ffffff" filter="url(#softShadow)"/>
+    <rect x="0" y="0" width="630" height="264" rx="22" fill="#ffffff" opacity="0.92"/>
+    <rect x="32" y="34" width="72" height="72" rx="18" fill="#e8f5f1"/>
+    <path d="M54 58 h30 a12 12 0 0 1 12 12 v28 H54 Z" fill="#1f9d8a"/>
+    <path d="M64 74 h22 M64 88 h16" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+
+    <text x="126" y="72" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+          font-size="54" font-weight="800" fill="#162421">Page Crafter</text>
+    <text x="128" y="112" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+          font-size="23" font-weight="600" fill="#49645f">AI-powered Confluence docs manager</text>
+
+    <g transform="translate(36 148)" font-family="Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="22" font-weight="700">
+      <rect x="0" y="0" width="126" height="50" rx="25" fill="#e8f5f1"/>
+      <text x="32" y="33" fill="#157464">Sync</text>
+      <rect x="144" y="0" width="138" height="50" rx="25" fill="#eaf1ff"/>
+      <text x="176" y="33" fill="#285fb8">Search</text>
+      <rect x="300" y="0" width="126" height="50" rx="25" fill="#fff4d8"/>
+      <text x="334" y="33" fill="#9a6812">Draft</text>
+      <rect x="444" y="0" width="138" height="50" rx="25" fill="#eef1ef"/>
+      <text x="474" y="33" fill="#44524f">Publish</text>
+    </g>
+  </g>
+
+  <g transform="translate(820 76)" filter="url(#softShadow)">
+    <rect x="0" y="28" width="214" height="270" rx="22" fill="#ffffff"/>
+    <rect x="28" y="62" width="110" height="18" rx="9" fill="#1f9d8a"/>
+    <rect x="28" y="98" width="150" height="12" rx="6" fill="#cbd8d4"/>
+    <rect x="28" y="122" width="132" height="12" rx="6" fill="#cbd8d4"/>
+    <rect x="28" y="170" width="158" height="74" rx="14" fill="#edf7f3"/>
+    <path d="M60 208 h92" stroke="#1f9d8a" stroke-width="9" stroke-linecap="round"/>
+
+    <rect x="176" y="0" width="248" height="316" rx="24" fill="#ffffff"/>
+    <rect x="206" y="38" width="96" height="18" rx="9" fill="#3578e5"/>
+    <circle cx="230" cy="104" r="30" fill="#eaf1ff"/>
+    <path d="M220 104 h20 M230 94 v20" stroke="#3578e5" stroke-width="8" stroke-linecap="round"/>
+    <rect x="278" y="88" width="110" height="13" rx="7" fill="#cbd8d4"/>
+    <rect x="278" y="114" width="82" height="13" rx="7" fill="#cbd8d4"/>
+    <rect x="206" y="168" width="178" height="88" rx="17" fill="#f7f9fb"/>
+    <path d="M230 207 h124 M230 231 h84" stroke="#3578e5" stroke-width="9" stroke-linecap="round" opacity="0.78"/>
+
+    <rect x="388" y="62" width="238" height="238" rx="23" fill="#ffffff"/>
+    <rect x="424" y="100" width="118" height="18" rx="9" fill="#e3a72f"/>
+    <rect x="424" y="144" width="160" height="13" rx="7" fill="#d6d0c1"/>
+    <rect x="424" y="170" width="128" height="13" rx="7" fill="#d6d0c1"/>
+    <circle cx="506" cy="234" r="35" fill="#fff4d8"/>
+    <path d="M490 234 l12 12 23 -27" fill="none" stroke="#b77b16" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g opacity="0.92">
+    <circle cx="798" cy="226" r="8" fill="#1f9d8a"/>
+    <circle cx="1038" cy="112" r="8" fill="#3578e5"/>
+    <circle cx="1212" cy="324" r="8" fill="#e3a72f"/>
+    <path d="M798 226 C 888 182, 938 156, 1038 112" fill="none" stroke="#1f9d8a" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 16"/>
+    <path d="M1038 112 C 1128 160, 1168 248, 1212 324" fill="none" stroke="#3578e5" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 16"/>
+  </g>
+</svg>

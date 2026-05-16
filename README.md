@@ -1,9 +1,10 @@
+
 # Page Crafter
+
+![Page Crafter banner](assets/readme-banner.svg)
 
 AI-assisted documentation manager for Atlassian Confluence Data Center.
 Syncs pages, indexes them for semantic search, generates Markdown drafts via LLM, renders a live Confluence preview, and publishes only after human review.
-
-![screenshot](assets/screenshot-01.png)
 
 ## Features
 
@@ -42,7 +43,7 @@ cp .env.example .env
 # Required: CONFLUENCE_PAT, OPENAI_API_KEY (or Ollama settings)
 ```
 
-Frontend browser configuration lives in `apps/web/public/config.json`. The Docker build copies it into the Vue bundle served by FastAPI.
+Frontend browser configuration lives in `frontend/public/config.json`. The Docker build copies it into the Vue bundle served by FastAPI.
 
 ### 2. Start infrastructure
 
@@ -74,14 +75,14 @@ Run infrastructure in Docker, apps on the host:
 docker compose up -d postgres redis keycloak lightrag
 
 # Backend API (hot-reload)
-uv sync --all-packages
-uv run uvicorn cm_api.main:app --reload --app-dir apps/api/src
+uv sync
+uv run page-crafter api --reload
 
 # Worker
-uv run celery -A cm_worker.celery_app worker --loglevel=info
+uv run page-crafter worker
 
 # Beat scheduler (nightly sync)
-uv run celery -A cm_beat.celery_app beat --loglevel=info
+uv run page-crafter beat
 
 # Frontend
 npm install
@@ -91,13 +92,13 @@ npm run dev:web   # http://localhost:5173, proxies /api to localhost:8000
 ## Repository layout
 
 ```none
-apps/
-  api/        FastAPI application (cm-api)
-  beat/       Celery Beat scheduler (cm-beat)
-  worker/     Celery worker (cm-worker)
-  web/        Vue 3 frontend
-packages/
-  shared/     Shared ORM models, Pydantic schemas, settings (cm-shared)
+frontend/     Vue 3 frontend
+src/
+  page_crafter/
+    api/        FastAPI application and static frontend hosting
+    scheduler/  Celery Beat application
+    worker/     Celery worker application and tasks
+    shared/     ORM models, Pydantic schemas, settings
 docker/
   keycloak/   Realm import JSON
 docs/         Architecture, configuration, API reference, deployment guide

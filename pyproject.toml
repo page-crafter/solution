@@ -2,15 +2,31 @@
 name = "page-crafter"
 version = "0.1.0"
 requires-python = ">=3.13,<3.14"
-dependencies = []
-
-[tool.uv.workspace]
-members = [
-  "packages/shared",
-  "apps/api",
-  "apps/beat",
-  "apps/worker"
+dependencies = [
+  "beautifulsoup4>=4.14.2",
+  "celery[redis]>=5.5.3",
+  "cryptography<47",
+  "fastapi>=0.136.1",
+  "httpx>=0.28.1",
+  "langchain-ollama>=1.1.0",
+  "langchain-openai>=1.2.1",
+  "langgraph>=1.1.10",
+  "markdown-to-confluence>=0.5.9",
+  "numpy>=2.3.5",
+  "psycopg[binary]>=3.2.12",
+  "pydantic>=2.12.0",
+  "pydantic-settings>=2.12.0",
+  "pyjwt[crypto]>=2.10.1",
+  "sqlalchemy>=2.0.44",
+  "uvicorn[standard]>=0.38.0",
 ]
+
+[project.scripts]
+page-crafter = "page_crafter.cli:main"
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
@@ -19,13 +35,14 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests", "apps/beat/tests", "apps/worker/tests"]
-pythonpath = [
-  "packages/shared/src",
-  "apps/api/src",
-  "apps/beat/src",
-  "apps/worker/src"
-]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"page_crafter.api" = ["static/**/*"]
 
 [tool.ruff]
 line-length = 100

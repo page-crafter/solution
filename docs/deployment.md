@@ -50,7 +50,7 @@ docker compose build worker
 
 ### Frontend runtime config
 
-The Vue bundle reads browser-facing settings from `/config.json` at startup. Update `apps/web/public/config.json` before building to target a different API or Keycloak host.
+The Vue bundle reads browser-facing settings from `/config.json` at startup. Update `frontend/public/config.json` before building to target a different API or Keycloak host.
 
 The default `backend.baseUrl` is empty, so the browser calls `/api` on the same `http://localhost:8000` origin that serves the frontend.
 
@@ -65,16 +65,16 @@ docker compose up -d postgres redis keycloak lightrag
 ### Backend (API + worker)
 
 ```bash
-uv sync --all-packages
+uv sync
 
 # API (hot-reload)
-uv run uvicorn cm_api.main:app --reload --app-dir apps/api/src
+uv run page-crafter api --reload
 
 # Worker
-uv run celery -A cm_worker.celery_app worker --loglevel=info
+uv run page-crafter worker
 
 # Beat scheduler (optional — triggers nightly sync)
-uv run celery -A cm_beat.celery_app beat --loglevel=info
+uv run page-crafter beat
 ```
 
 ### Frontend
@@ -86,21 +86,21 @@ npm run dev:web        # http://localhost:5173
 
 ## Dockerfile structure
 
-The root `Dockerfile` uses the **workspace root as build context**. This is required because the Python apps depend on `packages/shared`, and the final image also embeds the built Vue app.
+The root `Dockerfile` uses the **workspace root as build context**. This is required because the final image builds the Vue app and embeds it inside the Python package served by FastAPI.
 
 ```
 docker compose build
   context: .  (workspace root)
   └── Dockerfile
-      ├── web-build stage  → node:24 build of apps/web
-      └── runtime stage    → python:3.13-slim with cm-api, cm-beat, cm-worker, cm-shared, and Vue dist
+      ├── web-build stage  → node:24 build of frontend
+      └── runtime stage    → python:3.13-slim with page-crafter and Vue dist
 ```
 
 ### Unified app image
 
 - Runtime base: `python:3.13-slim`
 - uv copied from `ghcr.io/astral-sh/uv:latest`
-- Dependencies installed with `uv sync --frozen --no-dev --all-packages`
+- Dependencies installed with `uv sync --frozen --no-dev`
 - `UV_COMPILE_BYTECODE=1` — bytecode compiled at build time, not first import
 - BuildKit cache mount on `/root/.cache/uv` — fast rebuilds when `uv.lock` unchanged
 - `api`, `beat`, and `worker` all use `page-crafter:local`
@@ -127,7 +127,7 @@ docker compose up -d keycloak
 ```bash
 # Python
 uv lock --upgrade
-uv sync --all-packages
+uv sync
 
 # Node
 npm update --workspaces

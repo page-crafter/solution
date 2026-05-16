@@ -105,23 +105,18 @@ POST /chat/sessions/{id}/stream
 
 ```
 confluenceManager2/
-├── apps/
-│   ├── api/          FastAPI application (cm-api)
-│   ├── beat/         Celery Beat scheduler (cm-beat)
-│   ├── worker/       Celery worker (cm-worker)
-│   └── web/          Vue 3 frontend
-├── packages/
-│   └── shared/       Shared Python package (cm-shared)
-│       ├── db/       SQLAlchemy session, base, schema init
-│       ├── models/   ORM models (ConfluencePage, PageEditRun, …)
-│       ├── schemas/  Pydantic read/write schemas
-│       ├── settings/ AppSettings (pydantic-settings)
-│       └── jobs/     Job history utilities
+├── frontend/         Vue 3 frontend
+├── src/
+│   └── page_crafter/
+│       ├── api/        FastAPI application and static frontend hosting
+│       ├── scheduler/  Celery Beat app
+│       ├── worker/     Celery worker app and executable tasks
+│       └── shared/     DB, ORM models, schemas, settings, job utilities
 ├── docker/
 │   ├── keycloak/     Realm import JSON
 │   └── confluence/   atlassian-agent.jar
 ├── docs/             This documentation
-├── Dockerfile        Unified app image for API, Beat, worker, and Vue dist
+├── Dockerfile        Unified page-crafter image with embedded Vue dist
 └── docker-compose.yml
 ```
 

@@ -244,16 +244,15 @@ The following Celery tasks are dispatched by the API. They are not directly call
 
 | Task | Triggered by |
 |------|-------------|
-| `cm_worker.sync_space` | `POST /sync/runs` |
-| `cm_worker.scheduled_sync` | `cm-beat` Celery Beat scheduler (cron) |
-| `cm_worker.refresh_page` | `POST /confluence/pages/{id}/refresh` |
-| `cm_worker.create_empty_page` | `POST /confluence/pages` |
-| `cm_worker.delete_page` | `DELETE /confluence/pages/{id}` |
-| `cm_worker.move_page` | `POST /confluence/pages/{id}/move` |
-| `cm_worker.generate_markdown` | `POST /editor/runs` |
-| `cm_worker.render_draft` | `PATCH /editor/runs/{id}/draft` |
-| `cm_worker.render_preview` | `POST /editor/runs/{id}/preview` |
-| `cm_worker.publish_page` | `POST /editor/runs/{id}/publish` |
-| `cm_worker.propose_markdown_update` | `POST /editor/pages/{id}/proposals` |
-| `cm_worker.convert_markdown` | Internal (called by generate/render tasks) |
-| `cm_worker.answer_question` | `POST /chat/sessions/{id}/messages` |
+| `page_crafter.sync_space` | `POST /sync/runs` |
+| `page_crafter.scheduled_sync` | Scheduler Celery Beat app (cron) |
+| `page_crafter.refresh_page` | `POST /confluence/pages/{id}/refresh` |
+| `page_crafter.create_empty_page` | `POST /confluence/pages` |
+| `page_crafter.delete_page` | `DELETE /confluence/pages/{id}` |
+| `page_crafter.move_page` | `POST /confluence/pages/{id}/move` |
+| `page_crafter.generate_markdown` | `POST /editor/runs` |
+| `page_crafter.render_draft` | `PATCH /editor/runs/{id}/draft` |
+| `page_crafter.render_preview` | `POST /editor/runs/{id}/preview` |
+| `page_crafter.publish_page` | `POST /editor/runs/{id}/publish` |
+| `page_crafter.propose_markdown_update` | `POST /editor/pages/{id}/proposals` |
+| `page_crafter.convert_markdown` | Internal (called by generate/render tasks) |

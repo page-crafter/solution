@@ -2,13 +2,12 @@
   "name": "page-crafter",
   "private": true,
   "workspaces": [
-    "apps/web"
+    "frontend"
   ],
   "scripts": {
-    "dev:web": "npm --workspace apps/web run dev",
-    "build:web": "npm --workspace apps/web run build",
-    "test:web": "npm --workspace apps/web run test",
-    "lint:web": "npm --workspace apps/web run lint"
+    "dev:web": "npm --workspace frontend run dev",
+    "build:web": "npm --workspace frontend run build",
+    "test:web": "npm --workspace frontend run test",
+    "lint:web": "npm --workspace frontend run lint"
   }
 }
-

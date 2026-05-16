@@ -1,15 +1,13 @@
 .git
 .claude
 node_modules
-apps/web/node_modules
+frontend/node_modules
 **/__pycache__
 **/*.pyc
 **/.pytest_cache
 **/.ruff_cache
 .venv
-apps/api/.venv
-apps/worker/.venv
-apps/web/dist
+frontend/dist
 *.md
 assets
 tests

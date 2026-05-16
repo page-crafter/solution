@@ -1,0 +1,37 @@
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from page_crafter.shared.confluence.storage_markdown import storage_xhtml_to_markdown
+from page_crafter.shared.db.base import Base
+
+
+class ConfluencePage(Base):
+    """Persist the latest synced Confluence page and its draft/index state."""
+
+    __tablename__ = "confluence_pages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    confluence_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    space_key: Mapped[str] = mapped_column(String(64), index=True)
+    space_name: Mapped[str | None] = mapped_column(String(255))
+    parent_confluence_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    title: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(64), default="current")
+    version_number: Mapped[int] = mapped_column(Integer, default=1)
+    source_storage_xhtml: Mapped[str] = mapped_column(Text, default="")
+    extracted_text: Mapped[str] = mapped_column(Text, default="")
+    web_url: Mapped[str | None] = mapped_column(String(1000))
+    edit_url: Mapped[str | None] = mapped_column(String(1000))
+    tiny_url: Mapped[str | None] = mapped_column(String(1000))
+    is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False)
+    draft_state: Mapped[str] = mapped_column(String(64), default="Published")
+    last_synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    @property
+    def source_markdown(self) -> str:
+        """Return editable Markdown derived from the current Confluence Storage XHTML."""
+        return storage_xhtml_to_markdown(self.source_storage_xhtml) or self.extracted_text

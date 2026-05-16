@@ -2,15 +2,6 @@ version = 1
 revision = 3
 requires-python = "==3.13.*"
 
-[manifest]
-members = [
-    "cm-api",
-    "cm-beat",
-    "cm-shared",
-    "cm-worker",
-    "page-crafter",
-]
-
 [[package]]
 name = "amqp"
 version = "5.3.1"
@@ -226,96 +217,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cb/a2/57f4ac79838cfae6912f997b4d1a64a858fb0c86d7fcaae6f7b58d267fca/click-repl-0.3.0.tar.gz", hash = "sha256:17849c23dba3d667247dc4defe1757fff98694e90fe37474f3feebb69ced26a9", size = 10449, upload-time = "2023-06-15T12:43:51.141Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/40/9d857001228658f0d59e97ebd4c346fe73e138c6de1bce61dc568a57c7f8/click_repl-0.3.0-py3-none-any.whl", hash = "sha256:fb7e06deb8da8de86180a33a9da97ac316751c094c6899382da7feeeeb51b812", size = 10289, upload-time = "2023-06-15T12:43:48.626Z" },
-]
-
-[[package]]
-name = "cm-api"
-version = "0.1.0"
-source = { editable = "apps/api" }
-dependencies = [
-    { name = "celery" },
-    { name = "cm-shared" },
-    { name = "cryptography" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "pyjwt", extra = ["crypto"] },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "celery", specifier = ">=5.5.3" },
-    { name = "cm-shared", editable = "packages/shared" },
-    { name = "cryptography", specifier = "<47" },
-    { name = "fastapi", specifier = ">=0.136.1" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
-]
-
-[[package]]
-name = "cm-beat"
-version = "0.1.0"
-source = { editable = "apps/beat" }
-dependencies = [
-    { name = "celery", extra = ["redis"] },
-    { name = "cm-shared" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "celery", extras = ["redis"], specifier = ">=5.5.3" },
-    { name = "cm-shared", editable = "packages/shared" },
-]
-
-[[package]]
-name = "cm-shared"
-version = "0.1.0"
-source = { editable = "packages/shared" }
-dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "sqlalchemy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.14.2" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.12" },
-    { name = "pydantic", specifier = ">=2.12.0" },
-    { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.44" },
-]
-
-[[package]]
-name = "cm-worker"
-version = "0.1.0"
-source = { editable = "apps/worker" }
-dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "celery", extra = ["redis"] },
-    { name = "cm-shared" },
-    { name = "httpx" },
-    { name = "langchain-ollama" },
-    { name = "langchain-openai" },
-    { name = "langgraph" },
-    { name = "markdown-to-confluence" },
-    { name = "numpy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.14.2" },
-    { name = "celery", extras = ["redis"], specifier = ">=5.5.3" },
-    { name = "cm-shared", editable = "packages/shared" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "langchain-ollama", specifier = ">=1.1.0" },
-    { name = "langchain-openai", specifier = ">=1.2.1" },
-    { name = "langgraph", specifier = ">=1.1.10" },
-    { name = "markdown-to-confluence", specifier = ">=0.5.9" },
-    { name = "numpy", specifier = ">=2.3.5" },
 ]
 
 [[package]]
@@ -849,7 +750,25 @@ wheels = [
 [[package]]
 name = "page-crafter"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "celery", extra = ["redis"] },
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "langchain-ollama" },
+    { name = "langchain-openai" },
+    { name = "langgraph" },
+    { name = "markdown-to-confluence" },
+    { name = "numpy" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyjwt", extra = ["crypto"] },
+    { name = "sqlalchemy" },
+    { name = "uvicorn", extra = ["standard"] },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -858,6 +777,24 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.14.2" },
+    { name = "celery", extras = ["redis"], specifier = ">=5.5.3" },
+    { name = "cryptography", specifier = "<47" },
+    { name = "fastapi", specifier = ">=0.136.1" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "langchain-ollama", specifier = ">=1.1.0" },
+    { name = "langchain-openai", specifier = ">=1.2.1" },
+    { name = "langgraph", specifier = ">=1.1.10" },
+    { name = "markdown-to-confluence", specifier = ">=0.5.9" },
+    { name = "numpy", specifier = ">=2.3.5" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.2.12" },
+    { name = "pydantic", specifier = ">=2.12.0" },
+    { name = "pydantic-settings", specifier = ">=2.12.0" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
+    { name = "sqlalchemy", specifier = ">=2.0.44" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.38.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [

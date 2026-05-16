@@ -1,6 +1,6 @@
 # Configuration
 
-All backend configuration is loaded from environment variables (or a `.env` file at the workspace root) by `packages/shared/src/cm_shared/settings/app.py` using `pydantic-settings`.
+All backend configuration is loaded from environment variables (or a `.env` file at the workspace root) by `src/page_crafter/shared/settings/app.py` using `pydantic-settings`.
 
 Copy `.env.example` to `.env` and fill in the required values before starting the stack.
 
@@ -92,12 +92,12 @@ LightRAG is configured both via the app settings (for the API/worker to connect)
 | ----------- | ----------- | --------------------------------------------------------------------------- |
 | `SYNC_CRON` | `0 2 * * *` | Cron expression for automated Confluence sync. Default: daily at 02:00 UTC. |
 
-`SYNC_CRON` is read by the `cm-beat` package. The worker consumes the scheduled
-`cm_worker.scheduled_sync` task but does not own the Beat schedule.
+`SYNC_CRON` is read by the scheduler Celery app. The worker consumes the scheduled
+`page_crafter.scheduled_sync` task but does not own the Beat schedule.
 
 ## Frontend runtime config
 
-Browser-facing frontend settings are loaded from `/config.json` at startup. The source file is `apps/web/public/config.json` and is copied into the Vue build that FastAPI serves from the unified app image.
+Browser-facing frontend settings are loaded from `/config.json` at startup. The source file is `frontend/public/config.json` and is copied into the Vue build that FastAPI serves from the unified app image.
 
 | JSON path                | Default                 | Description                                                                 |
 | ------------------------ | ----------------------- | --------------------------------------------------------------------------- |

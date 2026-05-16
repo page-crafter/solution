@@ -3,10 +3,10 @@ FROM node:24-alpine AS web-build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-COPY apps/web/package.json apps/web/package.json
+COPY frontend/package.json frontend/package.json
 RUN npm ci
 
-COPY apps/web apps/web
+COPY frontend frontend
 RUN npm run build:web
 
 FROM python:3.13-slim AS runtime
@@ -23,17 +23,17 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-COPY packages/shared packages/shared
-COPY apps/api apps/api
-COPY apps/beat apps/beat
-COPY apps/worker apps/worker
+COPY src src
+COPY --from=web-build --chown=1001:1001 /app/frontend/dist src/page_crafter/api/static
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --all-packages && \
+    uv sync --frozen --no-dev && \
     groupadd --system --gid 1001 app && \
     useradd --system --uid 1001 --gid 1001 --no-create-home app && \
     chown -R app:app /app
 
-COPY --from=web-build --chown=1001:1001 /app/apps/web/dist apps/web/dist
-
 USER app
+
+EXPOSE 8000
+
+CMD ["page-crafter", "api"]

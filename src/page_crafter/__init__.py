@@ -1,0 +1,1 @@
+"""Page Crafter application package."""
