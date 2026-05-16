@@ -9,6 +9,7 @@ import AppSpinner from '../components/common/AppSpinner.vue'
 import JobStatusChip from '../components/common/JobStatusChip.vue'
 import SectionCard from '../components/common/SectionCard.vue'
 import KpiCard from '../components/dashboard/KpiCard.vue'
+import { useEasterEggs } from '../composables/useEasterEggs'
 import type { KpiCard as KpiCardType, SpaceStat, LightRagStatus, TaskExecution } from '../types/api'
 import { formatRelativeTime } from '../utils/dateTime'
 import { formatTaskName } from '../utils/jobStatus'
@@ -18,6 +19,7 @@ const cards = shallowRef<KpiCardType[]>([])
 const spaces = shallowRef<SpaceStat[]>([])
 const lightrag = shallowRef<LightRagStatus | null>(null)
 const recentJobs = shallowRef<TaskExecution[]>([])
+const { hyperdriveActive } = useEasterEggs()
 
 const activeSpace = computed<SpaceStat | null>(() => spaces.value[0] ?? null)
 
@@ -68,17 +70,20 @@ onMounted(loadDashboard)
 
     <template v-else>
       <!-- Status bar -->
-      <VCard class="status-bar surface-border mb-6 pa-3" variant="flat">
+      <VCard
+        :class="['status-bar surface-border mb-6 pa-3', { 'status-bar--hyperdrive': hyperdriveActive }]"
+        variant="flat"
+      >
         <div class="status-row">
           <template v-if="lightrag">
             <VIcon
               :icon="lightrag.healthy ? 'mdi-circle' : 'mdi-circle'"
-              :color="lightrag.healthy ? 'success' : 'error'"
+              :color="hyperdriveActive ? 'primary' : lightrag.healthy ? 'success' : 'error'"
               size="12"
             />
             <span class="status-label">Knowledge engine</span>
-            <VChip size="x-small" :color="lightrag.healthy ? 'success' : 'error'" variant="tonal">
-              {{ lightrag.healthy ? 'healthy' : 'unreachable' }}
+            <VChip size="x-small" :color="hyperdriveActive ? 'primary' : lightrag.healthy ? 'success' : 'error'" variant="tonal">
+              {{ hyperdriveActive ? 'hyperdrive' : lightrag.healthy ? 'healthy' : 'unreachable' }}
             </VChip>
             <span class="status-sep">·</span>
             <span class="muted-text text-caption">{{ lightrag.core_version }}</span>
@@ -89,10 +94,10 @@ onMounted(loadDashboard)
             <span class="status-sep">·</span>
             <VChip
               size="x-small"
-              :color="lightrag.pipeline.busy ? 'warning' : 'default'"
+              :color="hyperdriveActive ? 'primary' : lightrag.pipeline.busy ? 'warning' : 'default'"
               variant="tonal"
             >
-              {{ lightrag.pipeline.busy ? `Indexing (${lightrag.pipeline.cur_batch}/${lightrag.pipeline.batchs})` : 'Pipeline idle' }}
+              {{ hyperdriveActive ? 'Hyperdrive indexing' : lightrag.pipeline.busy ? `Indexing (${lightrag.pipeline.cur_batch}/${lightrag.pipeline.batchs})` : 'Pipeline idle' }}
             </VChip>
             <template v-if="lightrag.doc_counts.failed > 0">
               <span class="status-sep">·</span>
@@ -200,6 +205,22 @@ onMounted(loadDashboard)
 <style scoped>
 .status-bar {
   border-radius: 8px;
+}
+
+.status-bar--hyperdrive {
+  border-color: #0c66e4;
+  box-shadow: 0 0 0 1px rgba(12, 102, 228, 0.18), 0 0 28px rgba(12, 102, 228, 0.18);
+  animation: hyperdrive-pulse 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes hyperdrive-pulse {
+  from {
+    background: #ffffff;
+  }
+
+  to {
+    background: #f0f6ff;
+  }
 }
 
 .status-row {

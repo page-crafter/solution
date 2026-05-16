@@ -5,6 +5,7 @@ import EditorLayout from './layouts/EditorLayout.vue'
 import EmbedLayout from './layouts/EmbedLayout.vue'
 import EmptyLayout from './layouts/EmptyLayout.vue'
 import WebsiteLayout from './layouts/WebsiteLayout.vue'
+import EasterEggLayer from './components/common/EasterEggLayer.vue'
 
 const route = useRoute()
 const layout = computed(() => {
@@ -21,6 +22,6 @@ const layout = computed(() => {
     <component v-if="layout" :is="layout">
       <RouterView />
     </component>
+    <EasterEggLayer />
   </VApp>
 </template>
-

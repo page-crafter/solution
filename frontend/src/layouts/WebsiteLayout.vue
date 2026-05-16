@@ -2,11 +2,13 @@
 import { computed, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useEasterEggs } from '../composables/useEasterEggs'
 import ParticleBackground from '../components/common/ParticleBackground.vue'
 
 const route = useRoute()
 const auth = useAuthStore()
 const drawer = shallowRef(true)
+const { sidebarShuffleActive, registerSidebarLogoActivation } = useEasterEggs()
 
 const hasRole = computed(() => auth.isAdmin || auth.isChat)
 
@@ -60,9 +62,16 @@ const activeTitle = computed(() => allItems.find((item) => item.to === route.pat
     <VNavigationDrawer v-if="auth.isAdmin" v-model="drawer" width="272" color="surface" border="end">
       <template #prepend>
         <div class="drawer-header">
-          <VAvatar size="32" rounded="sm" color="primary">
-            <VIcon icon="mdi-book-open-page-variant-outline" />
-          </VAvatar>
+          <button
+            class="brand-trigger"
+            type="button"
+            aria-label="Documentation Hub"
+            @click="registerSidebarLogoActivation()"
+          >
+            <VAvatar size="32" rounded="sm" color="primary">
+              <VIcon icon="mdi-book-open-page-variant-outline" />
+            </VAvatar>
+          </button>
           <div>
             <div class="product-name">Documentation Hub</div>
             <div class="muted-text text-caption">Confluence updater</div>
@@ -70,7 +79,11 @@ const activeTitle = computed(() => allItems.find((item) => item.to === route.pat
         </div>
       </template>
 
-      <VList nav density="compact">
+      <VList
+        nav
+        density="compact"
+        :class="{ 'drawer-list--shuffle': sidebarShuffleActive }"
+      >
         <VListItem
           v-for="item in items"
           :key="item.to"
@@ -153,6 +166,48 @@ const activeTitle = computed(() => allItems.find((item) => item.to === route.pat
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid #dfe1e6;
+}
+
+.brand-trigger {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.brand-trigger:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+}
+
+.drawer-list--shuffle :deep(.v-list-item) {
+  animation: sidebar-shuffle 0.4s ease-in-out 3;
+}
+
+.drawer-list--shuffle :deep(.v-list-item:nth-child(2n)) {
+  animation-delay: 0.04s;
+}
+
+.drawer-list--shuffle :deep(.v-list-item:nth-child(3n)) {
+  animation-delay: 0.08s;
+}
+
+@keyframes sidebar-shuffle {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  35% {
+    transform: translateX(8px);
+  }
+
+  65% {
+    transform: translateX(-5px);
+  }
 }
 
 .product-name {

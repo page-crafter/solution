@@ -9,6 +9,7 @@ import LoginView from '../views/LoginView.vue'
 import PagesView from '../views/PagesView.vue'
 import PageEditorView from '../views/PageEditorView.vue'
 import RunsView from '../views/RunsView.vue'
+import SecretArchiveView from '../views/SecretArchiveView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -21,6 +22,7 @@ export const router = createRouter({
     { path: '/chat', component: ChatView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
     { path: '/runs', component: RunsView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
     { path: '/integration', component: IntegrationView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
+    { path: '/secret', alias: '/coffee', component: SecretArchiveView, meta: { layout: 'website', requiresAuth: true, requiresAdmin: true } },
     { path: '/embed/chat', component: EmbedChatView, meta: { layout: 'embed' } },
   ],
 })

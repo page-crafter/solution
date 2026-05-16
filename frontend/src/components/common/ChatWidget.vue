@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, shallowRef } from 'vue'
 import { createChatSession, fetchChatMessages, streamChatQuestion } from '../../api/chat'
+import { useEasterEggs } from '../../composables/useEasterEggs'
 import { useChatSettings } from '../../composables/useChatSettings'
 import type { ChatMessage, ChatSession } from '../../types/api'
 import AppSpinner from './AppSpinner.vue'
 import ChatComposer from '../chat/ChatComposer.vue'
 import ChatMessages from '../chat/ChatMessages.vue'
+
+const VAULT_COMMAND = '/vault'
+const VAULT_RESPONSE = [
+  '**Vault access granted.**',
+  '',
+  '- Project: Page Crafter',
+  '- Secret: frontend-only documentation vault',
+  '- Rule: publish only after human review',
+  '',
+  'No Confluence page, job, or knowledge engine was touched.',
+].join('\n')
 
 const open = shallowRef(false)
 const session = shallowRef<ChatSession>()
@@ -17,6 +29,8 @@ const streaming = shallowRef(false)
 const chatGeneration = shallowRef(0)
 
 const { snapshot } = useChatSettings()
+const { showSecretNotification } = useEasterEggs()
+let localMessageId = -1
 
 const hasChatContent = computed(
   () =>
@@ -43,11 +57,41 @@ async function clearChat(): Promise<void> {
   session.value = await createChatSession()
 }
 
+/** Creates a local-only chat message that is never sent to the API. */
+function localChatMessage(role: ChatMessage['role'], content: string): ChatMessage {
+  return {
+    id: localMessageId--,
+    session_id: session.value?.id ?? 'local-vault',
+    role,
+    content,
+    citations_json: '[]',
+  }
+}
+
+/** Handles hidden widget commands before the normal chat stream is invoked. */
+function answerVaultCommand(message: string): boolean {
+  if (message.toLowerCase() !== VAULT_COMMAND) return false
+
+  chatGeneration.value += 1
+  draftMessage.value = ''
+  streaming.value = false
+  streamingContent.value = ''
+  streamingError.value = ''
+  messages.value = [
+    ...messages.value,
+    localChatMessage('user', message),
+    localChatMessage('assistant', VAULT_RESPONSE),
+  ]
+  showSecretNotification('Documentation vault opened')
+  return true
+}
+
 /** Streams one widget question while ignoring stale responses after resets. */
 async function askQuestion(): Promise<void> {
   if (!session.value || streaming.value) return
   const message = draftMessage.value.trim()
   if (!message) return
+  if (answerVaultCommand(message)) return
 
   const sessionId = session.value.id
   const requestGeneration = chatGeneration.value
